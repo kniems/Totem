@@ -168,10 +168,11 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .close-btn{background:var(--surface2);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:var(--text2);font-size:18px;display:flex;align-items:center;justify-content:center;}
 
 /* EVENTS */
-.filter-strip{display:flex;gap:7px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+.filter-strip{display:flex;gap:7px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;}
 .filter-strip::-webkit-scrollbar{display:none;}
-.fchip{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
-.fchip.act{background:var(--accent);border-color:var(--accent);color:white;}
+.fchip{background:var(--surface);border:2px solid var(--border2);border-radius:20px;padding:7px 16px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.fchip:hover{border-color:var(--accent);color:var(--accent);}
+.fchip.act{background:var(--accent);border-color:var(--accent);color:white;box-shadow:0 2px 8px rgba(232,99,58,0.3);}
 .ev-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;animation:fadeUp 0.2s ease both;}
 .ev-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
 .ev-name{font-weight:700;font-size:15px;line-height:1.3;flex:1;}
@@ -1166,16 +1167,25 @@ function buildChat() {
 }
 
 function subscribeToChat(chatId) {
-  // Unsub previous
-  if (chatUnsubs[chatId]) chatUnsubs[chatId]();
-  const colPath = chatId==='general'
+  // Unsub all previous listeners
+  Object.values(chatUnsubs).forEach(unsub => { try { unsub(); } catch(e){} });
+  chatUnsubs = {};
+
+  const colPath = chatId === 'general'
     ? `groups/${S.groupId}/messages`
     : `groups/${S.groupId}/eventChats/${chatId}/messages`;
 
-  const col = F.collection(db, ...colPath.split('/'));
-  const q = F.query(col, F.orderBy('createdAt','asc'));
-  chatUnsubs[chatId] = F.onSnapshot(q, snap => {
-    const msgs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const parts = colPath.split('/');
+  const col = F.collection(db, ...parts);
+  // No orderBy — avoids needing a Firestore index. Sort client-side.
+  chatUnsubs[chatId] = F.onSnapshot(col, snap => {
+    const msgs = snap.docs
+      .map(d => ({id: d.id, ...d.data()}))
+      .sort((a, b) => {
+        const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+        const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+        return ta - tb;
+      });
     renderMessages(msgs);
   });
 }
@@ -1332,8 +1342,8 @@ function buildSettings() {
     <div class="sec-hdr"><div class="sec-title">Settings</div></div>
     <div class="lbl">Group</div>
     <div class="set-group">
-      <div class="set-row"><div><div class="set-lbl">Group name</div><div class="set-val">${gData?.name||'My Crew'}</div></div><div style="color:var(--text3);font-size:18px">›</div></div>
-      <div class="set-row"><div><div class="set-lbl">Group totem</div><div class="set-val">${gData?.totem||'🦅'}</div></div><div style="color:var(--text3);font-size:18px">›</div></div>
+      <div class="set-row" style="cursor:pointer;" onclick="editGroupName()"><div><div class="set-lbl">Group name</div><div class="set-val">${gData?.name||'My Crew'}</div></div><div style="color:var(--text3);font-size:18px">›</div></div>
+      <div class="set-row" style="cursor:pointer;" onclick="editGroupTotem()"><div><div class="set-lbl">Group totem</div><div class="set-val" style="font-size:22px">${gData?.totem||'🦅'}</div></div><div style="color:var(--text3);font-size:18px">›</div></div>
       <div class="set-row" style="flex-direction:column;align-items:flex-start;cursor:default;">
         <div class="set-lbl">Invite link</div>
         <div class="invite-box" style="width:100%">
@@ -1390,6 +1400,59 @@ window._togNotif = function(k) {
   S.notifs[k]=!S.notifs[k];
   const b=document.getElementById('tog-'+k);
   if(b)b.classList.toggle('on',S.notifs[k]);
+};
+
+window.editGroupName = function() {
+  const current = S.groupData?.name || '';
+  const name = prompt('Group name:', current);
+  if (!name || !name.trim() || name.trim() === current) return;
+  dbSet(`groups/${S.groupId}`, {name: name.trim()}).then(() => {
+    S.groupData = {...S.groupData, name: name.trim()};
+    document.getElementById('hdrName').textContent = name.trim();
+    buildSettings();
+  });
+};
+
+window.editGroupTotem = function() {
+  const existing = document.getElementById('editGroupTotemModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'editGroupTotemModal';
+  modal.className = 'overlay';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sh-handle"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="font-family:Unbounded,sans-serif;font-size:18px;font-weight:700;">Group Totem</div>
+        <button class="close-btn" onclick="document.getElementById('editGroupTotemModal').remove()">×</button>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Pick a symbol for your crew — shows on the map and in the group badge.</div>
+      <div class="totem-grid" id="groupTotemGrid">
+        ${TOTEMS.map(t => `<button class="totem-opt${t===S.groupData?.totem?' sel':''}" onclick="selectGroupTotem('${t}')">${t}</button>`).join('')}
+      </div>
+      <div style="text-align:center;font-size:48px;margin:16px 0;" id="groupTotemPreview">${S.groupData?.totem||'🦅'}</div>
+      <button class="save-btn" onclick="saveGroupTotem()">SAVE TOTEM</button>
+    </div>`;
+  document.getElementById('app').appendChild(modal);
+};
+
+window._pendingGroupTotem = null;
+window.selectGroupTotem = function(t) {
+  window._pendingGroupTotem = t;
+  document.querySelectorAll('#groupTotemGrid .totem-opt').forEach(b => b.classList.toggle('sel', b.textContent === t));
+  const prev = document.getElementById('groupTotemPreview');
+  if (prev) { prev.textContent = t; prev.style.animation='none'; requestAnimationFrame(()=>prev.style.animation='totemPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both'); }
+};
+
+window.saveGroupTotem = async function() {
+  const t = window._pendingGroupTotem || S.groupData?.totem;
+  if (!t) return;
+  await dbSet(`groups/${S.groupId}`, {totem: t});
+  S.groupData = {...S.groupData, totem: t};
+  document.getElementById('hdrTotem').textContent = t;
+  document.getElementById('editGroupTotemModal')?.remove();
+  buildSettings();
 };
 
 window.leaveGroup = function() {
