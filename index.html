@@ -61,18 +61,18 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 /* ONBOARDING */
 .ob{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--surface);z-index:100;overflow-y:auto;scrollbar-width:none;}
 .ob::-webkit-scrollbar{display:none;}
-.ob-hero{background:var(--accent);padding:56px 28px 36px;position:relative;overflow:hidden;flex-shrink:0;}
+.ob-hero{background:var(--accent);padding:48px 28px 32px;position:relative;overflow:hidden;flex-shrink:0;}
 .ob-ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,0.1);}
 .ob-logo{font-family:'Unbounded',sans-serif;font-size:36px;font-weight:900;color:white;letter-spacing:-1px;position:relative;z-index:1;}
 .ob-tagline{font-size:15px;color:rgba(255,255,255,0.8);margin-top:10px;line-height:1.55;position:relative;z-index:1;}
-.ob-body{flex:1;padding:28px 24px 40px;display:flex;flex-direction:column;gap:14px;}
+.ob-body{padding:24px 24px 60px;display:flex;flex-direction:column;gap:12px;}
 .ob-step{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
 .ob-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;line-height:1.35;}
 .ob-desc{font-size:13px;color:var(--text2);line-height:1.6;}
 .ob-input{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;font-family:'Outfit',sans-serif;font-size:15px;color:var(--text);outline:none;width:100%;transition:border-color 0.2s,box-shadow 0.2s;}
 .ob-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-l2);}
 .ob-input::placeholder{color:var(--text3);}
-.ob-primary{background:var(--accent);border:none;border-radius:var(--r-sm);padding:16px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:white;cursor:pointer;width:100%;letter-spacing:0.5px;margin-top:auto;transition:background 0.15s,transform 0.1s;box-shadow:0 4px 16px rgba(232,99,58,0.3);}
+.ob-primary{background:var(--accent);border:none;border-radius:var(--r-sm);padding:16px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:white;cursor:pointer;width:100%;letter-spacing:0.5px;margin-top:8px;transition:background 0.15s,transform 0.1s;box-shadow:0 4px 16px rgba(232,99,58,0.3);}
 .ob-primary:hover{background:var(--accent-d);}
 .ob-primary:active{transform:scale(0.98);}
 .ob-primary:disabled{opacity:0.5;cursor:not-allowed;}
@@ -116,7 +116,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .nav-btn.act::after{content:'';position:absolute;bottom:0;left:10px;right:10px;height:2.5px;background:var(--accent);border-radius:2px 2px 0 0;}
 
 /* CONTENT */
-.content{flex:1;overflow-y:auto;padding:18px;scrollbar-width:none;}
+.content{flex:1;overflow-y:auto;padding:20px 20px 80px;scrollbar-width:none;}
 .content::-webkit-scrollbar{display:none;}
 
 /* SHARED */
@@ -456,9 +456,9 @@ function dbListen(path, cb) {
   return F.onSnapshot(ref, snap => cb(snap.exists() ? snap.data() : null));
 }
 
-function dbListenCol(col, cb, ...constraints) {
+function dbListenCol(col, cb, orderField) {
   const ref = F.collection(db, col);
-  const q = constraints.length ? F.query(ref, ...constraints) : F.query(ref, F.orderBy('createdAt','asc'));
+  const q = orderField ? F.query(ref, F.orderBy(orderField,'asc')) : F.query(ref);
   return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({id:d.id,...d.data()}))));
 }
 
@@ -588,8 +588,7 @@ function renderOb() {
         <div class="lbl">Your city</div>
         <input class="ob-input" id="obCity" placeholder="Chicago, IL" value="${s.city}">
         ${S.groupId ? '<div class="ob-dots"><div class="ob-dot act"></div></div>' : '<div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot act"></div></div>'}
-        <button class="ob-primary" style="margin-top:16px;" onclick="window._ob('finish')">LET'S GO →</button>
-        <div style="height:40px;flex-shrink:0;"></div>
+        <button class="ob-primary" onclick="window._ob('finish')">LET'S GO →</button>
       </div>`,
 
     join: `${hero()}
@@ -598,7 +597,7 @@ function renderOb() {
         <div class="ob-desc">Enter an invite code from your crew.</div>
         <input class="ob-input" id="obJoinCode" placeholder="Group invite code (e.g. abc123)">
         <div class="ob-desc" style="color:var(--text3);font-size:12px;">Ask your group admin for the code — it's in Settings → Invite Code.</div>
-        <button class="ob-primary" onclick="window._ob('joinSubmit')" style="margin-top:auto;">JOIN GROUP →</button>
+        <button class="ob-primary" onclick="window._ob('joinSubmit')">JOIN GROUP →</button>
         <button class="ob-ghost" onclick="window._ob('welcome')">← Back</button>
       </div>`,
   };
@@ -656,7 +655,7 @@ window._ob = async function(next) {
       id: S.userId, name: s.name, handle: s.handle.startsWith('@') ? s.handle : '@'+s.handle,
       bio: s.bio, avatar: s.avatar, color, city: s.city, nextCity: '',
       socials: {ig:'',sc:''}, isAdmin: !S.groupId || S.userId === S.userId,
-      joinedAt: Date.now(),
+      joinedAt: Date.now(), createdAt: Date.now(),
     };
     await dbSet(`groups/${S.groupId}/members/${S.userId}`, profile);
     S.myProfile = profile;
@@ -710,12 +709,13 @@ async function loadApp() {
     S.members = members;
     if (document.getElementById('tab-squad').style.display !== 'none') buildSquad();
     if (document.getElementById('tab-map').style.display !== 'none') buildMap();
-  }));
+  })); // no orderBy — members don't have server timestamps
 
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/events`, events => {
     S.events = events;
     if (document.getElementById('tab-events').style.display !== 'none') buildEvents();
-  }));
+    buildChat(); // refresh chat tabs when events change
+  })); // sorted client-side by dateTs
 
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/pins`, pins => {
     S.pins = pins.filter(p => p.active);
