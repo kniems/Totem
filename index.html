@@ -742,7 +742,14 @@ async function loadApp() {
   }));
 
   S.unsubs.push(dbListen(`groups/${S.groupId}`, gd => {
-    if (gd) { S.groupData = gd; S.interests = gd.interests || S.interests; }
+    if (gd) {
+      S.groupData = gd;
+      S.interests = gd.interests || S.interests;
+      document.getElementById('hdrTotem').textContent = gd.totem || '🦅';
+      document.getElementById('hdrName').textContent = gd.name || 'My Crew';
+      // Rebuild settings if it's visible
+      if (document.getElementById('tab-settings').style.display !== 'none') buildSettings();
+    }
   }));
 
   buildSquad();
@@ -769,6 +776,7 @@ window.showTab = function(name, btn) {
     }
   });
   if (name === 'chat') { buildChat(); setTimeout(scrollChatToBottom, 100); }
+  if (name === 'settings') buildSettings();
 };
 
 // ─── SQUAD ────────────────────────────────────────────────────────────────────
@@ -1379,25 +1387,53 @@ window.closeMemberSheet = function() { document.getElementById('memberSheet').st
 function buildSettings() {
   const gData = S.groupData;
   const isAdmin = gData?.adminId === S.userId;
-  const inviteUrl = `${window.location.origin}${window.location.pathname}?join=${S.groupId}`;
+  const groupId = S.groupId || '';
+  const inviteUrl = groupId ? `${window.location.origin}${window.location.pathname}?join=${groupId}` : '';
+
   document.getElementById('tab-settings').innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Settings</div></div>
+
     <div class="lbl">Group</div>
     <div class="set-group">
-      <div class="set-row" style="cursor:pointer;" onclick="editGroupName()"><div><div class="set-lbl">Group name</div><div class="set-val">${gData?.name||'My Crew'}</div></div><div style="color:var(--text3);font-size:18px">›</div></div>
-      <div class="set-row" style="cursor:pointer;" onclick="editGroupTotem()"><div><div class="set-lbl">Group totem</div><div class="set-val" style="font-size:22px">${gData?.totem||'🦅'}</div></div><div style="color:var(--text3);font-size:18px">›</div></div>
-      <div class="set-row" style="flex-direction:column;align-items:flex-start;cursor:default;">
-        <div class="set-lbl">Invite link</div>
-        <div class="invite-box" style="width:100%">
-          <span class="invite-url">${inviteUrl}</span>
-          <button class="copy-btn" onclick="navigator.clipboard.writeText('${inviteUrl}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button>
+      <div class="set-row" style="cursor:pointer;" onclick="editGroupName()">
+        <div>
+          <div class="set-lbl">Group name</div>
+          <div class="set-val">${gData?.name || 'My Crew'}</div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Share this link with your crew — they'll go straight to onboarding for this group.</div>
+        <div style="color:var(--text3);font-size:18px;">›</div>
+      </div>
+      <div class="set-row" style="cursor:pointer;" onclick="editGroupTotem()">
+        <div>
+          <div class="set-lbl">Group totem</div>
+          <div class="set-val" style="font-size:22px;">${gData?.totem || '🦅'}</div>
+        </div>
+        <div style="color:var(--text3);font-size:18px;">›</div>
       </div>
     </div>
-    <div class="lbl">Group Interests ${isAdmin?'':'(admin only)'}</div>
+
+    <div class="lbl">Invite Link</div>
+    <div class="set-group">
+      <div style="padding:14px 16px;">
+        <div class="set-lbl" style="margin-bottom:10px;">Share with your crew</div>
+        ${inviteUrl ? `
+        <div class="invite-box">
+          <span class="invite-url">${inviteUrl}</span>
+          <button class="copy-btn" id="copyInviteBtn" onclick="
+            navigator.clipboard.writeText('${inviteUrl}').then(()=>{
+              document.getElementById('copyInviteBtn').textContent='Copied!';
+              setTimeout(()=>document.getElementById('copyInviteBtn').textContent='Copy',2000);
+            });
+          ">Copy</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;">Anyone with this link will be taken straight into your group.</div>
+        ` : '<div style="font-size:13px;color:var(--text3);">Loading invite link…</div>'}
+      </div>
+    </div>
+
+    <div class="lbl">Group Interests</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5;">Toggle what your crew is into — drives event suggestions for everyone.</div>
     <div class="int-grid" id="settingsIntGrid"></div>
+
     <div class="lbl">Notifications</div>
     <div class="set-group">
       ${[['messages','New chat messages'],['events','Event suggestions'],['joins','Member joins']].map(([k,label])=>`
@@ -1406,9 +1442,10 @@ function buildSettings() {
           <button class="toggle${S.notifs[k]?' on':''}" id="tog-${k}" onclick="window._togNotif('${k}')"></button>
         </div>`).join('')}
     </div>
+
     <div class="lbl">Danger Zone</div>
     <button class="danger-btn" onclick="leaveGroup()">Leave Group</button>
-    <div style="height:24px;"></div>`;
+    <div style="height:40px;"></div>`;
 
   buildSettingsInts();
 }
