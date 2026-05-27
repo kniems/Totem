@@ -233,13 +233,13 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .leg-next{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;}
 
 /* CHAT */
-.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;}
+.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
 .chat-tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;flex-shrink:0;}
 .chat-tabs::-webkit-scrollbar{display:none;}
 .chat-tab{background:none;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;color:var(--text3);padding:10px 12px 11px;cursor:pointer;position:relative;white-space:nowrap;flex-shrink:0;}
 .chat-tab.act{color:var(--accent);}
 .chat-tab.act::after{content:'';position:absolute;bottom:0;left:6px;right:6px;height:2.5px;background:var(--accent);border-radius:2px 2px 0 0;}
-.chat-msgs{flex:1;overflow-y:auto;padding:14px 18px;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px 18px 10px;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;}
 .chat-msgs::-webkit-scrollbar{display:none;}
 .chat-day{text-align:center;font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:4px 0;}
 .msg{display:flex;gap:8px;align-items:flex-end;}
@@ -253,12 +253,12 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .msg.me .bubble{background:var(--accent);color:white;border-bottom-right-radius:4px;}
 .msg-time{font-size:10px;color:var(--text3);margin-top:3px;}
 .msg.me .msg-time{text-align:right;}
-.chat-footer{padding:10px 14px 24px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.chat-footer{padding:10px 14px;padding-bottom:max(20px, env(safe-area-inset-bottom, 20px));border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
 .chat-input-row{display:flex;gap:8px;align-items:center;}
-.chat-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:22px;padding:10px 16px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color 0.15s;}
+.chat-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:22px;padding:11px 16px;font-family:'Outfit',sans-serif;font-size:16px;color:var(--text);outline:none;transition:border-color 0.15s;}
 .chat-input:focus{border-color:var(--accent);background:var(--surface);}
 .chat-input::placeholder{color:var(--text3);}
-.send-btn{background:var(--accent);border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;color:white;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 10px rgba(232,99,58,0.3);}
+.send-btn{background:var(--accent);border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;color:white;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 10px rgba(232,99,58,0.3);}
 .send-btn:active{transform:scale(0.92);}
 
 /* PROFILE */
@@ -395,7 +395,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 
 <script type="module">
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const TOTEMS = ["🦅","🐺","🦁","🐻","🦊","🐬","🦋","🌵","⚡","🔥","🌊","🌙","🗻","🌿","🎯"];
+const TOTEMS = ["🦅","🐺","🦁","🐻","🦊","🐬","🦋","🌵","⚡","🔥","🌊","🌙","🗻","🌿","🎯","🍤","🦐","🎸","🥁","🎪"];
 const MEMBER_COLORS = ["#E8633A","#3A8C6E","#C47D1A","#7A5EA7","#C03A6A","#3A6EA7","#8B5E3C","#2A7A5E","#B8430F","#5E3A8C"];
 const ALL_INTERESTS = [
   {id:"music",label:"Live Music",emoji:"🎵"},{id:"festivals",label:"Festivals",emoji:"🎪"},
@@ -417,7 +417,7 @@ let S = {
   myProfile: null, groupData: null,
   members: [], events: [], messages: [], pins: [],
   interests: ["music","festivals","food"],
-  activeInterest: "all", activeChatTab: "general",
+  activeInterest: "all", activeCity: "all", activeChatTab: "general",
   notifs: {messages:true,events:true,joins:false},
   editAvatar: "🌻",
   unsubs: [],
@@ -775,9 +775,21 @@ function buildSquad() {
 }
 
 // ─── EVENTS ───────────────────────────────────────────────────────────────────
+const US_CITIES = [
+  "Atlanta, GA","Austin, TX","Baltimore, MD","Boston, MA","Charlotte, NC",
+  "Chicago, IL","Cincinnati, OH","Cleveland, OH","Columbus, OH","Dallas, TX",
+  "Denver, CO","Detroit, MI","Houston, TX","Indianapolis, IN","Kansas City, MO",
+  "Las Vegas, NV","Los Angeles, CA","Louisville, KY","Memphis, TN","Miami, FL",
+  "Milwaukee, WI","Minneapolis, MN","Nashville, TN","New Orleans, LA","New York, NY",
+  "Oakland, CA","Orlando, FL","Philadelphia, PA","Phoenix, AZ","Pittsburgh, PA",
+  "Portland, OR","Raleigh, NC","Richmond, VA","Sacramento, CA","Salt Lake City, UT",
+  "San Diego, CA","San Francisco, CA","Seattle, WA","St. Louis, MO","Tampa, FL",
+  "Washington, DC","Bonnaroo (Manchester, TN)","Coachella (Indio, CA)",
+  "Lollapalooza (Chicago, IL)","Outside Lands (San Francisco, CA)",
+];
+
 function formatDateDisplay(dateStr) {
   if (!dateStr) return 'TBD';
-  // If it's an ISO date string (from date input), format it nicely
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     const d = new Date(dateStr + 'T12:00:00');
     return d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
@@ -797,12 +809,23 @@ function sortEvents(events) {
 
 function buildEvents() {
   const el = document.getElementById('tab-events');
-  const allEvents = sortEvents(S.events.filter(e => !e.deleted && e.interests?.some(i=>S.interests.includes(i))));
-  const filtered = S.activeInterest==='all' ? allEvents : allEvents.filter(e=>e.interests?.includes(S.activeInterest));
-  const chips = [{id:'all',label:'All',emoji:''},...ALL_INTERESTS.filter(i=>S.interests.includes(i.id))];
+
+  // Get all valid events
+  const allEvents = sortEvents(S.events.filter(e => !e.deleted));
+
+  // Get unique cities that have events
+  const eventCities = [...new Set(allEvents.map(e=>e.city).filter(Boolean))].sort();
+
+  // Apply both filters
+  let filtered = allEvents;
+  if (S.activeCity && S.activeCity !== 'all') filtered = filtered.filter(e=>e.city===S.activeCity);
+  if (S.activeInterest && S.activeInterest !== 'all') filtered = filtered.filter(e=>e.interests?.includes(S.activeInterest));
+
+  const interestChips = [{id:'all',label:'All Types',emoji:''},...ALL_INTERESTS.filter(i=>S.interests.includes(i.id))];
 
   el.innerHTML = `
-    <div class="sec-hdr"><div class="sec-title">Events</div><div class="sec-sub">${filtered.length} events</div></div>
+    <div class="sec-hdr"><div class="sec-title">Events</div><div class="sec-sub">${filtered.length} event${filtered.length!==1?'s':''}</div></div>
+
     <div class="add-event-form">
       <div class="add-event-title">➕ Add an event</div>
       <input class="form-input" id="evName" placeholder="Event name (e.g. Pitchfork Fest)" style="margin-bottom:8px;width:100%">
@@ -810,22 +833,36 @@ function buildEvents() {
         <input class="form-input" id="evDateStart" type="date" title="Start date">
         <input class="form-input" id="evDateEnd" type="date" title="End date (multi-day)">
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">End date optional — leave blank for single-day events</div>
-      <div class="form-row">
-        <input class="form-input" id="evCity" placeholder="City">
-        <input class="form-input" id="evVenue" placeholder="Venue (optional)">
-      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">End date optional for multi-day events</div>
+      <select class="form-select" id="evCity" style="margin-bottom:8px;">
+        <option value="">Select a city…</option>
+        ${US_CITIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <input class="form-input" id="evVenue" placeholder="Venue (optional)" style="margin-bottom:8px;width:100%">
       <select class="form-select" id="evType" style="margin-bottom:8px;">
         <option value="fest">Festival</option>
         <option value="show">Show</option>
-        <option value="other">Other</option>
+        <option value="other">Other Event</option>
       </select>
       <button class="add-btn" onclick="addEvent()">ADD EVENT + RSVP GOING</button>
     </div>
-    <div class="filter-strip">
-      ${chips.map(c=>`<button class="fchip${S.activeInterest===c.id?' act':''}" onclick="window._setFilter('${c.id}')">${c.emoji?c.emoji+' ':''}${c.label||'All'}</button>`).join('')}
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);white-space:nowrap;">📍 City</div>
     </div>
-    ${filtered.length===0?`<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">No events yet.<br>Add the first one above!</div></div>`:''}
+    <div class="filter-strip" style="margin-bottom:10px;">
+      <button class="fchip${!S.activeCity||S.activeCity==='all'?' act':''}" onclick="window._setCityFilter('all')">All Cities</button>
+      ${eventCities.map(c=>`<button class="fchip${S.activeCity===c?' act':''}" onclick="window._setCityFilter('${c.replace(/'/g,"\\'")}')">${c.split(',')[0]}</button>`).join('')}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);white-space:nowrap;">🎵 Type</div>
+    </div>
+    <div class="filter-strip" style="margin-bottom:14px;">
+      ${interestChips.map(c=>`<button class="fchip${S.activeInterest===c.id?' act':''}" onclick="window._setFilter('${c.id}')">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</button>`).join('')}
+    </div>
+
+    ${filtered.length===0?`<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">No events match your filters.<br>Try a different city or type.</div></div>`:''}
     ${filtered.map((ev,i)=>{
       const going = (ev.going||[]).map(id=>S.members.find(m=>m.id===id)).filter(Boolean);
       const iGo = (ev.going||[]).includes(S.userId);
@@ -839,15 +876,19 @@ function buildEvents() {
             ${canEdit?`<button style="background:none;border:none;font-size:14px;cursor:pointer;color:var(--text3);padding:2px 4px;" onclick="openEditEvent('${ev.id}')" title="Edit">✏️</button>`:''}
           </div>
         </div>
-        <div class="ev-meta"><span>📅 ${formatDateDisplay(ev.date)}</span>${ev.venue?`<span>📍 ${ev.venue}</span>`:''}</div>
-        <div class="ev-going" style="flex-wrap:wrap;gap:8px;">
+        <div class="ev-meta">
+          <span>📅 ${formatDateDisplay(ev.date)}</span>
+          ${ev.city?`<span>📍 ${ev.city}</span>`:''}
+          ${ev.venue?`<span>🏟 ${ev.venue}</span>`:''}
+        </div>
+        <div class="ev-going" style="flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
           <div style="display:flex;align-items:center;gap:6px;flex:1;">
             <div class="ga-wrap">${going.slice(0,5).map(m=>`<div class="ga" style="background:${m.color}20">${m.avatar}</div>`).join('')}</div>
-            ${going.length>0?`<span class="going-lbl">${names} going</span>`:`<span class="going-lbl" style="color:var(--text3)">No one yet</span>`}
+            ${going.length>0?`<span class="going-lbl">${names} going</span>`:`<span class="going-lbl" style="color:var(--text3)">No one going yet</span>`}
           </div>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-shrink:0;">
             <button class="rsvp-btn ${iGo?'going':'not-going'}" onclick="toggleRsvp('${ev.id}',${iGo})">${iGo?'✓ Going':'+ I\'m In'}</button>
-            <button style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 10px;font-family:Outfit,sans-serif;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;" onclick="openEventChat('${ev.id}','${ev.name.replace(/'/g,'\\\'')}')" title="Event chat">💬 Chat</button>
+            <button style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 10px;font-family:Outfit,sans-serif;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;" onclick="openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}')">💬 Chat</button>
           </div>
         </div>
       </div>`;
@@ -855,10 +896,13 @@ function buildEvents() {
 }
 
 window._setFilter = function(id) { S.activeInterest=id; buildEvents(); };
+window._setCityFilter = function(city) { S.activeCity=city; buildEvents(); };
 
 async function addEvent() {
   const name = document.getElementById('evName')?.value.trim();
   if (!name) { alert('Please enter an event name'); return; }
+  const city = document.getElementById('evCity')?.value;
+  if (!city) { alert('Please select a city'); return; }
   const startDate = document.getElementById('evDateStart')?.value;
   const endDate = document.getElementById('evDateEnd')?.value;
   let dateDisplay = '', dateTs = 0;
@@ -869,17 +913,16 @@ async function addEvent() {
       : startDate;
   }
   const ev = {
-    name,
-    date: dateDisplay || startDate || '',
-    dateTs,
-    city: document.getElementById('evCity')?.value.trim()||'',
+    name, date: dateDisplay || startDate || '',
+    dateTs, city,
     venue: document.getElementById('evVenue')?.value.trim()||'',
     type: document.getElementById('evType')?.value||'show',
     interests: S.interests.slice(0,2),
     going: [S.userId], addedBy: S.userId,
   };
   await dbAdd(`groups/${S.groupId}/events`, ev);
-  ['evName','evDateStart','evDateEnd','evCity','evVenue'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['evName','evDateStart','evDateEnd','evVenue'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const cityEl = document.getElementById('evCity'); if(cityEl) cityEl.value='';
 }
 window.addEvent = addEvent;
 
@@ -917,7 +960,10 @@ window.openEditEvent = function(evId) {
       <div class="lbl">End Date (optional)</div>
       <input class="ob-input" id="eeDe" type="date">
       <div class="lbl">City</div>
-      <input class="ob-input" id="eeC" value="${(ev.city||'').replace(/"/g,'&quot;')}">
+      <select class="form-select" id="eeC" style="margin-bottom:8px;">
+        <option value="">Select a city…</option>
+        ${US_CITIES.map(c=>`<option value="${c}"${ev.city===c?' selected':''}>${c}</option>`).join('')}
+      </select>
       <div class="lbl">Venue</div>
       <input class="ob-input" id="eeV" value="${(ev.venue||'').replace(/"/g,'&quot;')}">
       <div class="lbl">Type</div>
@@ -946,7 +992,7 @@ window.saveEditEvent = async function(evId) {
     name: document.getElementById('eeN').value.trim(),
     date: dateDisplay || startDate || '',
     dateTs,
-    city: document.getElementById('eeC').value.trim(),
+    city: document.getElementById('eeC').value,
     venue: document.getElementById('eeV').value.trim(),
     type: document.getElementById('eeT').value,
   });
@@ -1025,14 +1071,34 @@ window.clearPin = clearPin;
 // ─── MAP ──────────────────────────────────────────────────────────────────────
 function buildMap() {
   const el = document.getElementById('tab-map');
-  const pins = S.members.map(m=>{
+
+  // Group members by city
+  const cityGroups = {};
+  S.members.forEach(m => {
     const pos = CITY_COORDS[m.city];
-    if (!pos) return '';
-    const px=pos.x*2, py=pos.y*1.32;
-    return `<g style="cursor:pointer" onclick="openMember('${m.id}')">
-      <circle cx="${px}" cy="${py}" r="13" fill="${m.color||'#E8633A'}" opacity="0.15"/>
-      <circle cx="${px}" cy="${py}" r="8" fill="${m.color||'#E8633A'}" opacity="0.9"/>
-      <text x="${px}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="7">${m.avatar||'🌻'}</text>
+    if (!pos) return;
+    if (!cityGroups[m.city]) cityGroups[m.city] = {pos, members:[]};
+    cityGroups[m.city].members.push(m);
+  });
+
+  // Build SVG city pins — stacked when multiple members in same city
+  const pins = Object.entries(cityGroups).map(([city, {pos, members}]) => {
+    const px = pos.x * 2, py = pos.y * 1.32;
+    const count = members.length;
+    const r = count > 1 ? 14 : 11;
+    const avatarRows = count === 1
+      ? `<text x="${px}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="9">${members[0].avatar||'🌻'}</text>`
+      : count === 2
+        ? `<text x="${px-5}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="7">${members[0].avatar||'🌻'}</text>
+           <text x="${px+5}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="7">${members[1].avatar||'🌻'}</text>`
+        : `<text x="${px-6}" y="${py-3}" text-anchor="middle" dominant-baseline="central" font-size="6">${members[0].avatar||'🌻'}</text>
+           <text x="${px+6}" y="${py-3}" text-anchor="middle" dominant-baseline="central" font-size="6">${members[1].avatar||'🌻'}</text>
+           <text x="${px}" y="${py+5}" text-anchor="middle" dominant-baseline="central" font-size="6">${count>3?`+${count-2}`:members[2].avatar||'🌻'}</text>`;
+    return `<g style="cursor:pointer" onclick="openMember('${members[0].id}')">
+      <circle cx="${px}" cy="${py}" r="${r+5}" fill="${members[0].color||'#E8633A'}" opacity="0.12"/>
+      <circle cx="${px}" cy="${py}" r="${r}" fill="${members[0].color||'#E8633A'}" opacity="0.88"/>
+      ${avatarRows}
+      <text x="${px}" y="${py+r+7}" text-anchor="middle" font-size="4.5" fill="#5A5450" font-family="Outfit,sans-serif" font-weight="600">${city.split(',')[0].toUpperCase()}</text>
     </g>`;
   }).join('');
 
@@ -1041,26 +1107,28 @@ function buildMap() {
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
     <div class="map-wrap">
-      <svg viewBox="0 0 200 130" style="width:100%;display:block;">
-        <rect width="200" height="130" fill="#DCE8DC"/>
+      <svg viewBox="0 0 200 140" style="width:100%;display:block;">
+        <rect width="200" height="140" fill="#DCE8DC"/>
         <path d="M30 48 L55 40 L82 37 L110 35 L138 33 L162 30 L174 36 L179 46 L176 57 L168 64 L162 72 L153 81 L138 88 L125 94 L108 94 L92 91 L73 90 L57 92 L42 89 L33 82 L27 70 L26 58 Z" fill="#C4D8C0" stroke="#AEBFAA" stroke-width="0.6"/>
         <path d="M143 88 L147 95 L149 104 L147 112 L144 114 L141 110 L139 97 Z" fill="#C4D8C0" stroke="#AEBFAA" stroke-width="0.6"/>
         <ellipse cx="138" cy="40" rx="9" ry="4" fill="#8FBFD4" opacity="0.7"/>
         <ellipse cx="152" cy="44" rx="5" ry="3" fill="#8FBFD4" opacity="0.7"/>
-        ${[40,55,70,85].map(y=>`<line x1="22" y1="${y}" x2="182" y2="${y}" stroke="#B8C8B4" stroke-width="0.25"/>`).join('')}
-        ${[50,75,100,125,150].map(x=>`<line x1="${x}" y1="28" x2="${x}" y2="118" stroke="#B8C8B4" stroke-width="0.25"/>`).join('')}
+        <ellipse cx="122" cy="38" rx="5" ry="2.5" fill="#8FBFD4" opacity="0.7"/>
+        ${[40,55,70,85,100].map(y=>`<line x1="22" y1="${y}" x2="182" y2="${y}" stroke="#B8C8B4" stroke-width="0.2"/>`).join('')}
+        ${[50,75,100,125,150].map(x=>`<line x1="${x}" y1="28" x2="${x}" y2="128" stroke="#B8C8B4" stroke-width="0.2"/>`).join('')}
         ${pins}
+        ${Object.keys(cityGroups).length===0?`<text x="100" y="72" text-anchor="middle" font-size="7" fill="#A09488" font-family="Outfit,sans-serif">Members appear once they set their city</text>`:''}
       </svg>
     </div>
     <div class="map-legend">
       ${S.members.map(m=>`
         <div class="leg-row" onclick="openMember('${m.id}')">
           <div style="font-size:20px">${m.avatar||'🌻'}</div>
-          <div class="leg-info"><div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div><div class="leg-city">${m.city||'Location not set'}</div></div>
-          ${m.nextCity?`<div class="leg-next"><span style="color:var(--accent)">→</span>${m.nextCity}</div>`:''}
+          <div class="leg-info"><div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div><div class="leg-city">${m.city||'City not set'}</div></div>
+          ${m.nextCity?`<div class="leg-next"><span style="color:var(--accent)">→</span> ${m.nextCity}</div>`:''}
         </div>`).join('')}
     </div>
-    ${unknownMembers.length?`<div style="margin-top:10px;font-size:12px;color:var(--text3);padding:10px 14px;background:var(--surface2);border-radius:var(--r-sm);">📍 ${unknownMembers.map(m=>m.name).join(', ')} — city not shown on map yet</div>`:''}`;
+    ${unknownMembers.length?`<div style="margin-top:10px;font-size:12px;color:var(--text3);padding:10px 14px;background:var(--surface2);border-radius:var(--r-sm);">📍 ${unknownMembers.map(m=>m.name).join(', ')} — update city in Profile to appear on map</div>`:''}`;
 }
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
