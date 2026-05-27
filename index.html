@@ -233,13 +233,12 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .leg-next{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;}
 
 /* CHAT */
-.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
 .chat-tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;flex-shrink:0;}
 .chat-tabs::-webkit-scrollbar{display:none;}
 .chat-tab{background:none;border:none;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;color:var(--text3);padding:10px 12px 11px;cursor:pointer;position:relative;white-space:nowrap;flex-shrink:0;}
 .chat-tab.act{color:var(--accent);}
 .chat-tab.act::after{content:'';position:absolute;bottom:0;left:6px;right:6px;height:2.5px;background:var(--accent);border-radius:2px 2px 0 0;}
-.chat-msgs{flex:1;overflow-y:auto;padding:14px 18px 10px;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px 18px 10px;scrollbar-width:none;display:flex;flex-direction:column;gap:12px;min-height:0;}
 .chat-msgs::-webkit-scrollbar{display:none;}
 .chat-day{text-align:center;font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:4px 0;}
 .msg{display:flex;gap:8px;align-items:flex-end;}
@@ -253,7 +252,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .msg.me .bubble{background:var(--accent);color:white;border-bottom-right-radius:4px;}
 .msg-time{font-size:10px;color:var(--text3);margin-top:3px;}
 .msg.me .msg-time{text-align:right;}
-.chat-footer{padding:10px 14px;padding-bottom:max(20px, env(safe-area-inset-bottom, 20px));border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.chat-footer{padding:12px 14px;padding-bottom:max(24px, env(safe-area-inset-bottom, 24px));border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;z-index:10;}
 .chat-input-row{display:flex;gap:8px;align-items:center;}
 .chat-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:22px;padding:11px 16px;font-family:'Outfit',sans-serif;font-size:16px;color:var(--text);outline:none;transition:border-color 0.15s;}
 .chat-input:focus{border-color:var(--accent);background:var(--surface);}
@@ -314,7 +313,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
   <div class="ob" id="ob" style="display:none;"></div>
 
   <!-- MAIN APP -->
-  <div id="mainApp" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;">
+  <div id="mainApp" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;height:100%;">
     <div class="hdr">
       <div class="hdr-top">
         <div class="logo">TOTEM</div>
@@ -333,13 +332,13 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
         <button class="nav-btn" onclick="showTab('settings',this)">Settings</button>
       </div>
     </div>
-    <div id="tab-squad" class="content"></div>
-    <div id="tab-events" class="content" style="display:none;"></div>
-    <div id="tab-pin" class="content" style="display:none;"></div>
-    <div id="tab-map" class="content" style="display:none;"></div>
-    <div id="tab-chat" class="chat-wrap" style="display:none;"></div>
-    <div id="tab-profile" class="content" style="display:none;"></div>
-    <div id="tab-settings" class="content" style="display:none;"></div>
+    <div id="tab-squad" class="content" style="flex:1;"></div>
+    <div id="tab-events" class="content" style="display:none;flex:1;"></div>
+    <div id="tab-pin" class="content" style="display:none;flex:1;"></div>
+    <div id="tab-map" class="content" style="display:none;flex:1;"></div>
+    <div id="tab-chat" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;"></div>
+    <div id="tab-profile" class="content" style="display:none;flex:1;"></div>
+    <div id="tab-settings" class="content" style="display:none;flex:1;"></div>
   </div>
 
   <!-- MEMBER SHEET -->
@@ -379,9 +378,9 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
       <div class="lbl">Avatar</div>
       <div class="totem-grid" id="editAvatarGrid"></div>
       <div class="lbl">Current City</div>
-      <input class="ob-input" id="editCity" placeholder="Chicago, IL">
+      <select class="form-select ob-input" id="editCity" style="padding:14px 16px;"></select>
       <div class="lbl">Heading to</div>
-      <input class="ob-input" id="editNextCity" placeholder="Detroit, MI (optional)">
+      <select class="form-select ob-input" id="editNextCity" style="padding:14px 16px;"></select>
       <div class="lbl">Instagram</div>
       <input class="ob-input" id="editIg" placeholder="@yourhandle">
       <div class="lbl">Soundcloud / Spotify</div>
@@ -586,7 +585,10 @@ function renderOb() {
         <div class="lbl">Bio</div>
         <input class="ob-input" id="obBio" placeholder="A little about you" value="${s.bio}">
         <div class="lbl">Your city</div>
-        <input class="ob-input" id="obCity" placeholder="Chicago, IL" value="${s.city}">
+        <select class="form-select ob-input" id="obCity" style="padding:14px 16px;">
+          <option value="">Select your city…</option>
+          ${US_CITIES.map(c=>`<option value="${c}"${s.city===c?' selected':''}>${c}</option>`).join('')}
+        </select>
         ${S.groupId ? '<div class="ob-dots"><div class="ob-dot act"></div></div>' : '<div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot act"></div></div>'}
         <button class="ob-primary" onclick="window._ob('finish')">LET'S GO →</button>
       </div>`,
@@ -626,9 +628,9 @@ window._ob = async function(next) {
   }
   if (next === 'finish') {
     const name = document.getElementById('obName')?.value.trim();
-    const city = document.getElementById('obCity')?.value.trim();
+    const city = document.getElementById('obCity')?.value;
     if (!name) { alert('Please enter your name'); return; }
-    if (!city) { alert('Please enter your city'); return; }
+    if (!city) { alert('Please select your city'); return; }
     s.name = name;
     s.handle = document.getElementById('obHandle')?.value.trim() || '@' + name.toLowerCase().replace(/\s/g,'');
     s.bio = document.getElementById('obBio')?.value.trim() || '';
@@ -741,9 +743,15 @@ window.showTab = function(name, btn) {
   btn.classList.add('act');
   ['squad','events','pin','map','chat','profile','settings'].forEach(t => {
     const el = document.getElementById('tab-'+t);
-    if(el) el.style.display = t===name ? (t==='chat'?'flex':'block') : 'none';
+    if (!el) return;
+    if (t === name) {
+      el.style.display = 'flex';
+      el.style.flexDirection = 'column';
+    } else {
+      el.style.display = 'none';
+    }
   });
-  if(name==='chat') scrollChatToBottom();
+  if (name === 'chat') { buildChat(); setTimeout(scrollChatToBottom, 100); }
 };
 
 // ─── SQUAD ────────────────────────────────────────────────────────────────────
@@ -1257,10 +1265,13 @@ window.openEditModal = function() {
   document.getElementById('editName').value = m.name||'';
   document.getElementById('editHandle').value = m.handle||'';
   document.getElementById('editBio').value = m.bio||'';
-  document.getElementById('editCity').value = m.city||'';
-  document.getElementById('editNextCity').value = m.nextCity||'';
   document.getElementById('editIg').value = m.socials?.ig||'';
   document.getElementById('editSc').value = m.socials?.sc||'';
+  // Populate city dropdowns
+  const cityOpts = `<option value="">Select a city…</option>${US_CITIES.map(c=>`<option value="${c}"${m.city===c?' selected':''}>${c}</option>`).join('')}`;
+  const nextOpts = `<option value="">Not heading anywhere yet</option>${US_CITIES.map(c=>`<option value="${c}"${m.nextCity===c?' selected':''}>${c}</option>`).join('')}`;
+  document.getElementById('editCity').innerHTML = cityOpts;
+  document.getElementById('editNextCity').innerHTML = nextOpts;
   document.getElementById('editAvatarGrid').innerHTML = TOTEMS.map(t=>`<button class="totem-opt${t===m.avatar?' sel':''}" onclick="window._pickEditAvatar('${t}')">${t}</button>`).join('');
   document.getElementById('editModal').style.display='flex';
 };
@@ -1278,8 +1289,8 @@ window.saveProfile = async function() {
     handle: document.getElementById('editHandle').value.trim()||S.myProfile.handle,
     bio: document.getElementById('editBio').value.trim(),
     avatar: S.editAvatar,
-    city: document.getElementById('editCity').value.trim()||S.myProfile.city,
-    nextCity: document.getElementById('editNextCity').value.trim(),
+    city: document.getElementById('editCity').value||S.myProfile.city,
+    nextCity: document.getElementById('editNextCity').value||'',
     socials: {ig: document.getElementById('editIg').value.trim(), sc: document.getElementById('editSc').value.trim()},
   };
   await dbSet(`groups/${S.groupId}/members/${S.userId}`, updates);
