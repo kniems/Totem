@@ -10,7 +10,7 @@
 <!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB3AKR6ZDizTdD8ApHMOd8eLlslocHiXQc",
@@ -24,7 +24,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 window._db = db;
-window._firebase = { collection, doc, setDoc, getDoc, getDocs, addDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where };
+window._firebase = { collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where };
 window._dbReady = true;
 window.dispatchEvent(new Event('dbReady'));
 </script>
@@ -65,7 +65,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .ob-ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,0.1);}
 .ob-logo{font-family:'Unbounded',sans-serif;font-size:36px;font-weight:900;color:white;letter-spacing:-1px;position:relative;z-index:1;}
 .ob-tagline{font-size:15px;color:rgba(255,255,255,0.8);margin-top:10px;line-height:1.55;position:relative;z-index:1;}
-.ob-body{padding:24px 24px 60px;display:flex;flex-direction:column;gap:12px;}
+.ob-body{padding:24px 24px;padding-bottom:max(80px, calc(env(safe-area-inset-bottom, 0px) + 80px));display:flex;flex-direction:column;gap:12px;}
 .ob-step{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text3);}
 .ob-title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;line-height:1.35;}
 .ob-desc{font-size:13px;color:var(--text2);line-height:1.6;}
@@ -362,6 +362,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
       <div class="soc-row" id="shSocials"></div>
       <div class="lbl">Going to</div>
       <div id="shEvents"></div>
+      <div id="shAdminActions"></div>
     </div>
   </div>
 
@@ -606,6 +607,7 @@ function renderOb() {
         </select>
         ${S.groupId ? '<div class="ob-dots"><div class="ob-dot act"></div></div>' : '<div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot act"></div></div>'}
         <button class="ob-primary" onclick="window._ob('finish')">LET'S GO →</button>
+        <div style="height:120px;flex-shrink:0;"></div>
       </div>`,
 
     join: `${hero()}
@@ -1342,7 +1344,33 @@ window.openMember = function(id) {
   document.getElementById('shEvents').innerHTML=evs.length===0
     ?'<div style="font-size:13px;color:var(--text3)">Nothing on the calendar yet</div>'
     :evs.map(e=>`<div class="sh-ev-row"><div class="sh-ev-dot" style="background:${m.color||'#E8633A'}"></div><div style="flex:1"><div style="font-weight:600;font-size:13px">${e.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${e.date||'TBD'}${e.city?` · ${e.city}`:''}</div></div></div>`).join('');
+
+  // Show remove button only if viewer is admin and not looking at themselves
+  const isAdmin = S.groupData?.adminId === S.userId;
+  const isSelf = m.id === S.userId;
+  document.getElementById('shAdminActions').innerHTML = (isAdmin && !isSelf) ? `
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);">
+      <button onclick="removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}') "
+        style="background:none;border:1.5px solid var(--red);border-radius:var(--r-sm);padding:13px;
+        font-family:Outfit,sans-serif;font-size:13px;font-weight:600;color:var(--red);
+        cursor:pointer;width:100%;transition:background 0.15s;">
+        Remove ${m.name} from group
+      </button>
+    </div>` : '';
+
   document.getElementById('memberSheet').style.display='flex';
+};
+
+window.removeMember = async function(memberId, memberName) {
+  if (!confirm(`Remove ${memberName} from the group? They will need the invite link to rejoin.`)) return;
+  try {
+    // Delete their member document from Firebase
+    await F.deleteDoc(F.doc(db, `groups/${S.groupId}/members`, memberId));
+    closeMemberSheet();
+  } catch(e) {
+    console.error('Remove member error:', e);
+    alert('Something went wrong. Try again.');
+  }
 };
 
 window.closeMemberSheet = function() { document.getElementById('memberSheet').style.display='none'; };
