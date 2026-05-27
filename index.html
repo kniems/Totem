@@ -433,33 +433,34 @@ function waitForDb() {
   });
 }
 
-async function dbSet(path, data) {
+function pathToRef(path) {
   const parts = path.split('/');
-  const ref = parts.length === 2 ? F.doc(db, parts[0], parts[1]) : F.doc(db, parts[0], parts[1], parts[2], parts[3]);
-  await F.setDoc(ref, data, {merge:true});
+  // odd number of parts = collection, even = document
+  if (parts.length % 2 === 0) return F.doc(db, ...parts);
+  return F.collection(db, ...parts);
+}
+
+async function dbSet(path, data) {
+  await F.setDoc(F.doc(db, ...path.split('/')), data, {merge: true});
 }
 
 async function dbGet(path) {
-  const parts = path.split('/');
-  const ref = parts.length === 2 ? F.doc(db, parts[0], parts[1]) : F.doc(db, parts[0], parts[1], parts[2], parts[3]);
-  const snap = await F.getDoc(ref);
-  return snap.exists() ? snap.data() : null;
+  const snap = await F.getDoc(F.doc(db, ...path.split('/')));
+  return snap.exists() ? {id: snap.id, ...snap.data()} : null;
 }
 
 async function dbAdd(col, data) {
-  return await F.addDoc(F.collection(db, col), {...data, createdAt: F.serverTimestamp()});
+  return await F.addDoc(F.collection(db, ...col.split('/')), {...data, createdAt: F.serverTimestamp()});
 }
 
 function dbListen(path, cb) {
-  const parts = path.split('/');
-  const ref = parts.length === 2 ? F.doc(db, parts[0], parts[1]) : F.doc(db, parts[0], parts[1], parts[2], parts[3]);
-  return F.onSnapshot(ref, snap => cb(snap.exists() ? snap.data() : null));
+  return F.onSnapshot(F.doc(db, ...path.split('/')), snap => cb(snap.exists() ? {id: snap.id, ...snap.data()} : null));
 }
 
 function dbListenCol(col, cb, orderField) {
-  const ref = F.collection(db, col);
-  const q = orderField ? F.query(ref, F.orderBy(orderField,'asc')) : F.query(ref);
-  return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({id:d.id,...d.data()}))));
+  const ref = F.collection(db, ...col.split('/'));
+  const q = orderField ? F.query(ref, F.orderBy(orderField, 'asc')) : F.query(ref);
+  return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({id: d.id, ...d.data()}))));
 }
 
 // ─── USER ID ──────────────────────────────────────────────────────────────────
@@ -481,18 +482,31 @@ async function boot() {
   // Check URL for invite
   const urlParams = new URLSearchParams(window.location.search);
   const inviteGroup = urlParams.get('join');
-  if (inviteGroup) { S.groupId = inviteGroup; setGroupId(inviteGroup); }
+  if (inviteGroup && inviteGroup !== S.groupId) {
+    S.groupId = inviteGroup;
+    setGroupId(inviteGroup);
+  }
 
   hideSplash();
 
   if (S.groupId) {
-    // Check if user has profile in this group
-    const profile = await dbGet(`groups/${S.groupId}/members/${S.userId}`);
-    if (profile) {
-      S.myProfile = profile;
-      await loadApp();
-    } else {
-      showOnboarding('profile');
+    try {
+      const profile = await dbGet(`groups/${S.groupId}/members/${S.userId}`);
+      if (profile && profile.name) {
+        S.myProfile = profile;
+        await loadApp();
+      } else {
+        // Profile not found — new member joining existing group
+        showOnboarding('profile');
+      }
+    } catch(e) {
+      console.error('Boot error:', e);
+      // If Firebase fails, show a retry screen rather than losing the user
+      document.getElementById('loading').innerHTML = `
+        <div class="loading-logo">TOTEM</div>
+        <div style="font-size:13px;color:var(--text2);margin:8px 20px;text-align:center;line-height:1.6;">Trouble connecting. Check your connection and try again.</div>
+        <button onclick="location.reload()" style="background:var(--accent);border:none;border-radius:10px;padding:12px 24px;font-family:Outfit,sans-serif;font-size:14px;font-weight:700;color:white;cursor:pointer;margin-top:8px;">Retry</button>`;
+      document.getElementById('loading').style.display = 'flex';
     }
   } else {
     showOnboarding('welcome');
