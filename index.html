@@ -11,6 +11,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB3AKR6ZDizTdD8ApHMOd8eLlslocHiXQc",
@@ -23,8 +24,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 window._db = db;
+window._auth = auth;
 window._firebase = { collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where };
+window._firebaseAuth = { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut };
 window._dbReady = true;
 window.dispatchEvent(new Event('dbReady'));
 </script>
@@ -44,6 +48,27 @@ window.dispatchEvent(new Event('dbReady'));
 html,body{height:100%;background:#D0C8BC;overflow:hidden;}
 body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased;}
 .phone{width:100%;max-width:430px;height:100vh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:var(--shadow-lg);}
+
+/* AUTH SCREEN */
+.auth-screen{position:absolute;inset:0;background:var(--surface);z-index:150;display:none;flex-direction:column;overflow-y:auto;scrollbar-width:none;}
+.auth-screen::-webkit-scrollbar{display:none;}
+.auth-hero{background:var(--accent);padding:52px 28px 36px;position:relative;overflow:hidden;flex-shrink:0;}
+.auth-hero::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);top:-60px;right:-60px;}
+.auth-logo{font-family:'Unbounded',sans-serif;font-size:38px;font-weight:900;color:white;letter-spacing:-1px;}
+.auth-tagline{font-size:14px;color:rgba(255,255,255,0.8);margin-top:8px;line-height:1.5;}
+.auth-body{padding:28px 24px;padding-bottom:max(60px,env(safe-area-inset-bottom,60px));display:flex;flex-direction:column;gap:14px;}
+.auth-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;line-height:1.3;}
+.auth-input{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;font-family:'Outfit',sans-serif;font-size:16px;color:var(--text);outline:none;width:100%;transition:border-color 0.2s;}
+.auth-input:focus{border-color:var(--accent);}
+.auth-input::placeholder{color:var(--text3);}
+.auth-btn{background:var(--accent);border:none;border-radius:var(--r-sm);padding:16px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:white;cursor:pointer;width:100%;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(232,99,58,0.3);transition:background 0.15s;}
+.auth-btn:hover{background:#C8522A;}
+.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.auth-switch{text-align:center;font-size:13px;color:var(--text3);}
+.auth-switch b{color:var(--accent);cursor:pointer;font-weight:600;}
+.auth-error{background:#FFF5F5;border:1px solid #FED7D7;border-radius:var(--r-sm);padding:10px 14px;font-size:13px;color:#C53030;display:none;line-height:1.5;}
+.auth-divider{display:flex;align-items:center;gap:12px;color:var(--text3);font-size:12px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* SPLASH */
 .splash{position:absolute;inset:0;background:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity 0.6s ease,transform 0.6s ease;}
@@ -296,6 +321,27 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 <body>
 <div class="phone" id="app">
 
+  <!-- AUTH SCREEN -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-hero">
+      <div class="auth-logo">TOTEM</div>
+      <div class="auth-tagline">Your crew's permanent home base.</div>
+    </div>
+    <div class="auth-body">
+      <div class="auth-title" id="authTitle">Welcome back</div>
+      <div class="auth-error" id="authError"></div>
+      <input class="auth-input" id="authEmail" type="email" placeholder="Email address" autocomplete="email">
+      <input class="auth-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password">
+      <input class="auth-input" id="authPasswordConfirm" type="password" placeholder="Confirm password" autocomplete="new-password" style="display:none;">
+      <button class="auth-btn" id="authSubmitBtn" onclick="window.authSubmit()">LOG IN</button>
+      <div class="auth-divider" id="authDivider">or</div>
+      <div class="auth-switch" id="authSwitch">
+        Don't have an account? <b onclick="window.authToggleMode()">Sign up</b>
+      </div>
+      <div style="height:20px;"></div>
+    </div>
+  </div>
+
   <!-- SPLASH -->
   <div class="splash" id="splash">
     <div class="splash-ring" style="width:300px;height:300px;top:-80px;right:-80px;"></div>
@@ -324,13 +370,13 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
         </div>
       </div>
       <div class="nav">
-        <button class="nav-btn act" onclick="showTab('squad',this)">Squad</button>
-        <button class="nav-btn" onclick="showTab('events',this)">Events</button>
-        <button class="nav-btn" onclick="showTab('pin',this)">📍 Live Pin</button>
-        <button class="nav-btn" onclick="showTab('map',this)">Map</button>
-        <button class="nav-btn" onclick="showTab('chat',this)">Chat</button>
-        <button class="nav-btn" onclick="showTab('profile',this)">Profile</button>
-        <button class="nav-btn" onclick="showTab('settings',this)">Settings</button>
+        <button class="nav-btn act" onclick="window.showTab('squad',this)">Squad</button>
+        <button class="nav-btn" onclick="window.showTab('events',this)">Events</button>
+        <button class="nav-btn" onclick="window.showTab('pin',this)">📍 Live Pin</button>
+        <button class="nav-btn" onclick="window.showTab('map',this)">Map</button>
+        <button class="nav-btn" onclick="window.showTab('chat',this)">Chat</button>
+        <button class="nav-btn" onclick="window.showTab('profile',this)">Profile</button>
+        <button class="nav-btn" onclick="window.showTab('settings',this)">Settings</button>
       </div>
     </div>
     <div id="tab-squad" class="content" style="flex:1;"></div>
@@ -343,12 +389,12 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
   </div>
 
   <!-- MEMBER SHEET -->
-  <div class="overlay" id="memberSheet" style="display:none;" onclick="closeMemberSheet()">
+  <div class="overlay" id="memberSheet" style="display:none;" onclick="window.closeMemberSheet()">
     <div class="sheet" onclick="event.stopPropagation()">
       <div class="sh-handle"></div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div class="sh-av" id="shAv"></div>
-        <button class="close-btn" onclick="closeMemberSheet()">×</button>
+        <button class="close-btn" onclick="window.closeMemberSheet()">×</button>
       </div>
       <div class="sh-name" id="shName"></div>
       <div style="font-size:12px;color:var(--text3);margin-top:3px;" id="shHandle"></div>
@@ -367,7 +413,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
   </div>
 
   <!-- EDIT PROFILE MODAL -->
-  <div class="edit-modal" id="editModal" style="display:none;" onclick="closeEditModal()">
+  <div class="edit-modal" id="editModal" style="display:none;" onclick="window.closeEditModal()">
     <div class="edit-sheet" onclick="event.stopPropagation()">
       <div class="sh-handle"></div>
       <div class="edit-title">Edit Profile</div>
@@ -387,8 +433,8 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
       <input class="ob-input" id="editIg" placeholder="@yourhandle">
       <div class="lbl">Soundcloud / Spotify</div>
       <input class="ob-input" id="editSc" placeholder="your profile">
-      <button class="save-btn" onclick="saveProfile()">SAVE PROFILE</button>
-      <button class="ob-ghost" style="margin-top:10px;" onclick="closeEditModal()">Cancel</button>
+      <button class="save-btn" onclick="window.saveProfile()">SAVE PROFILE</button>
+      <button class="ob-ghost" style="margin-top:10px;" onclick="window.closeEditModal()">Cancel</button>
     </div>
   </div>
 
@@ -464,12 +510,79 @@ function dbListenCol(col, cb, orderField) {
   return F.onSnapshot(q, snap => cb(snap.docs.map(d => ({id: d.id, ...d.data()}))));
 }
 
-// ─── USER ID ──────────────────────────────────────────────────────────────────
-function getUserId() {
-  let id = localStorage.getItem('totem_uid');
-  if (!id) { id = 'u_' + Math.random().toString(36).slice(2,10); localStorage.setItem('totem_uid', id); }
-  return id;
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+let FA; // Firebase Auth functions
+let authMode = 'login'; // 'login' or 'signup'
+
+function waitForAuth() {
+  return new Promise(resolve => {
+    if (window._auth) { FA = window._firebaseAuth; resolve(); }
+    else window.addEventListener('dbReady', () => { FA = window._firebaseAuth; resolve(); }, {once:true});
+  });
 }
+
+function showAuthScreen() {
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
+function hideAuthScreen() {
+  document.getElementById('authScreen').style.display = 'none';
+}
+
+window.authToggleMode = function() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  const isLogin = authMode === 'login';
+  document.getElementById('authTitle').textContent = isLogin ? 'Welcome back' : 'Create account';
+  document.getElementById('authSubmitBtn').textContent = isLogin ? 'LOG IN' : 'SIGN UP';
+  document.getElementById('authPasswordConfirm').style.display = isLogin ? 'none' : 'block';
+  document.getElementById('authSwitch').innerHTML = isLogin
+    ? `Don't have an account? <b onclick="window.authToggleMode()">Sign up</b>`
+    : `Already have an account? <b onclick="window.authToggleMode()">Log in</b>`;
+  document.getElementById('authError').style.display = 'none';
+};
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+window.authSubmit = async function() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const confirm = document.getElementById('authPasswordConfirm').value;
+  const btn = document.getElementById('authSubmitBtn');
+
+  if (!email || !password) { showAuthError('Please enter your email and password.'); return; }
+  if (authMode === 'signup' && password !== confirm) { showAuthError('Passwords don\'t match.'); return; }
+  if (password.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = authMode === 'login' ? 'Logging in…' : 'Creating account…';
+  document.getElementById('authError').style.display = 'none';
+
+  try {
+    if (authMode === 'login') {
+      await FA.signInWithEmailAndPassword(window._auth, email, password);
+    } else {
+      await FA.createUserWithEmailAndPassword(window._auth, email, password);
+    }
+    // onAuthStateChanged will handle the rest
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'LOG IN' : 'SIGN UP';
+    const msgs = {
+      'auth/user-not-found': 'No account found with that email. Try signing up.',
+      'auth/wrong-password': 'Incorrect password. Try again.',
+      'auth/email-already-in-use': 'An account with that email already exists. Try logging in.',
+      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/weak-password': 'Password should be at least 6 characters.',
+      'auth/too-many-requests': 'Too many attempts. Please try again later.',
+      'auth/invalid-credential': 'Incorrect email or password. Try again.',
+    };
+    showAuthError(msgs[e.code] || 'Something went wrong. Please try again.');
+  }
+};
 
 function getGroupId() { return localStorage.getItem('totem_gid'); }
 function setGroupId(id) { localStorage.setItem('totem_gid', id); }
@@ -477,41 +590,55 @@ function setGroupId(id) { localStorage.setItem('totem_gid', id); }
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 async function boot() {
   await waitForDb();
-  S.userId = getUserId();
-  S.groupId = getGroupId();
-
-  // Check URL for invite
-  const urlParams = new URLSearchParams(window.location.search);
-  const inviteGroup = urlParams.get('join');
-  if (inviteGroup && inviteGroup !== S.groupId) {
-    S.groupId = inviteGroup;
-    setGroupId(inviteGroup);
-  }
+  await waitForAuth();
 
   hideSplash();
 
-  if (S.groupId) {
-    try {
-      const profile = await dbGet(`groups/${S.groupId}/members/${S.userId}`);
-      if (profile && profile.name) {
-        S.myProfile = profile;
-        await loadApp();
-      } else {
-        // Profile not found — new member joining existing group
-        showOnboarding('profile');
+  // Listen for auth state — this persists across page reloads automatically
+  FA.onAuthStateChanged(window._auth, async (user) => {
+    if (user) {
+      // User is logged in
+      hideAuthScreen();
+      S.userId = user.uid;
+
+      // Check URL for invite
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteGroup = urlParams.get('join');
+      if (inviteGroup && inviteGroup !== S.groupId) {
+        S.groupId = inviteGroup;
+        setGroupId(inviteGroup);
       }
-    } catch(e) {
-      console.error('Boot error:', e);
-      // If Firebase fails, show a retry screen rather than losing the user
-      document.getElementById('loading').innerHTML = `
-        <div class="loading-logo">TOTEM</div>
-        <div style="font-size:13px;color:var(--text2);margin:8px 20px;text-align:center;line-height:1.6;">Trouble connecting. Check your connection and try again.</div>
-        <button onclick="location.reload()" style="background:var(--accent);border:none;border-radius:10px;padding:12px 24px;font-family:Outfit,sans-serif;font-size:14px;font-weight:700;color:white;cursor:pointer;margin-top:8px;">Retry</button>`;
+
+      S.groupId = S.groupId || getGroupId();
+
       document.getElementById('loading').style.display = 'flex';
+
+      if (S.groupId) {
+        try {
+          const profile = await dbGet(`groups/${S.groupId}/members/${S.userId}`);
+          if (profile && profile.name) {
+            S.myProfile = profile;
+            document.getElementById('loading').style.display = 'none';
+            await loadApp();
+          } else {
+            document.getElementById('loading').style.display = 'none';
+            showOnboarding('profile');
+          }
+        } catch(e) {
+          console.error('Boot error:', e);
+          document.getElementById('loading').style.display = 'none';
+          showOnboarding('profile');
+        }
+      } else {
+        document.getElementById('loading').style.display = 'none';
+        showOnboarding('welcome');
+      }
+    } else {
+      // Not logged in — show auth screen
+      document.getElementById('loading').style.display = 'none';
+      showAuthScreen();
     }
-  } else {
-    showOnboarding('welcome');
-  }
+  });
 }
 
 function hideSplash() {
@@ -793,7 +920,7 @@ function buildSquad() {
     ${upcoming.length ? `<div class="info-banner">🎪 You're going to ${upcoming.length} upcoming event${upcoming.length!==1?'s':''}!</div>` : ''}
     ${members.map((m,i)=>{
       const evCount = S.events.filter(e=>e.going?.includes(m.id)).length;
-      return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="openMember('${m.id}')">
+      return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
         <div class="m-row">
           <div class="m-av" style="background:${m.color||'#E8633A'}20">${m.avatar||'🌻'}</div>
           <div class="m-info">
@@ -877,7 +1004,7 @@ function buildEvents() {
         <option value="show">Show</option>
         <option value="other">Other Event</option>
       </select>
-      <button class="add-btn" onclick="addEvent()">ADD EVENT + RSVP GOING</button>
+      <button class="add-btn" onclick="window.addEvent()"">ADD EVENT + RSVP GOING</button>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -906,7 +1033,7 @@ function buildEvents() {
           <div class="ev-name">${ev.name}</div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
             <div class="ev-badge ${ev.type||'show'}">${ev.type==='fest'?'Festival':ev.type==='other'?'Event':'Show'}</div>
-            ${canEdit?`<button style="background:none;border:none;font-size:14px;cursor:pointer;color:var(--text3);padding:2px 4px;" onclick="openEditEvent('${ev.id}')" title="Edit">✏️</button>`:''}
+            ${canEdit?`<button style="background:none;border:none;font-size:14px;cursor:pointer;color:var(--text3);padding:2px 4px;" onclick="window.openEditEvent('${ev.id}')" title="Edit">✏️</button>`:''}
           </div>
         </div>
         <div class="ev-meta">
@@ -920,8 +1047,8 @@ function buildEvents() {
             ${going.length>0?`<span class="going-lbl">${names} going</span>`:`<span class="going-lbl" style="color:var(--text3)">No one going yet</span>`}
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            <button class="rsvp-btn ${iGo?'going':'not-going'}" onclick="toggleRsvp('${ev.id}',${iGo})">${iGo?'✓ Going':'+ I\'m In'}</button>
-            <button style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 10px;font-family:Outfit,sans-serif;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;" onclick="openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}')">💬 Chat</button>
+            <button class="rsvp-btn ${iGo?'going':'not-going'}" onclick="window.toggleRsvp('${ev.id}',${iGo})">${iGo?'✓ Going':'+ I\'m In'}</button>
+            <button style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 10px;font-family:Outfit,sans-serif;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;" onclick="window.openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}')">💬 Chat</button>
           </div>
         </div>
       </div>`;
@@ -1005,8 +1132,8 @@ window.openEditEvent = function(evId) {
         <option value="show"${ev.type==='show'?' selected':''}>Show</option>
         <option value="other"${ev.type==='other'?' selected':''}>Other</option>
       </select>
-      <button class="save-btn" style="margin-top:16px;" onclick="saveEditEvent('${evId}')">SAVE CHANGES</button>
-      <button style="background:none;border:1.5px solid var(--red);border-radius:var(--r-sm);padding:12px;font-family:Outfit,sans-serif;font-size:13px;font-weight:600;color:var(--red);cursor:pointer;width:100%;margin-top:10px;" onclick="deleteEvent('${evId}')">Delete Event</button>
+      <button class="save-btn" style="margin-top:16px;" onclick="window.saveEditEvent('${evId}')">SAVE CHANGES</button>
+      <button style="background:none;border:1.5px solid var(--red);border-radius:var(--r-sm);padding:12px;font-family:Outfit,sans-serif;font-size:13px;font-weight:600;color:var(--red);cursor:pointer;width:100%;margin-top:10px;" onclick="window.deleteEvent('${evId}')">Delete Event</button>
     </div>`;
   document.getElementById('app').appendChild(modal);
 };
@@ -1061,11 +1188,11 @@ function buildPin() {
     <div class="pin-hero">
       <div class="pin-hero-title">📍 Live Meetup Pin</div>
       <div class="pin-hero-sub">Drop your location so your crew can find you in the crowd. The digital totem pole.</div>
-      ${myPin ? `<button class="pin-drop-btn active" onclick="clearPin()">✓ Your pin is live — tap to remove</button>` : `
+      ${myPin ? `<button class="pin-drop-btn active" onclick="window.clearPin()"">✓ Your pin is live — tap to remove</button>` : `
         <input class="pin-input" id="pinLocInput" placeholder="Where are you? e.g. North Gate, Main Stage">
-        <button class="pin-drop-btn" onclick="dropPin()">DROP MY PIN 📍</button>`}
+        <button class="pin-drop-btn" onclick="window.dropPin()"">DROP MY PIN 📍</button>`}
     </div>
-    ${myPin ? `<div class="my-pin"><div style="font-size:24px">${S.myProfile?.avatar||'🌻'}</div><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--accent)">Your pin is live</div><div style="font-size:12px;color:var(--accent);opacity:0.7;margin-top:2px">📍 ${myPin.location}</div></div><button class="clear-pin" onclick="clearPin()">Remove</button></div>` : ''}
+    ${myPin ? `<div class="my-pin"><div style="font-size:24px">${S.myProfile?.avatar||'🌻'}</div><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--accent)">Your pin is live</div><div style="font-size:12px;color:var(--accent);opacity:0.7;margin-top:2px">📍 ${myPin.location}</div></div><button class="clear-pin" onclick="window.clearPin()"">Remove</button></div>` : ''}
     <div class="sec-hdr"><div class="sec-title">Active Pins</div><div class="sec-sub">${S.pins.length} live</div></div>
     ${S.pins.length===0?`<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-text">No active pins yet.<br>Drop yours so your crew can find you!</div></div>`:''}
     ${S.pins.map((p,i)=>{
@@ -1127,7 +1254,7 @@ function buildMap() {
         : `<text x="${px-6}" y="${py-3}" text-anchor="middle" dominant-baseline="central" font-size="6">${members[0].avatar||'🌻'}</text>
            <text x="${px+6}" y="${py-3}" text-anchor="middle" dominant-baseline="central" font-size="6">${members[1].avatar||'🌻'}</text>
            <text x="${px}" y="${py+5}" text-anchor="middle" dominant-baseline="central" font-size="6">${count>3?`+${count-2}`:members[2].avatar||'🌻'}</text>`;
-    return `<g style="cursor:pointer" onclick="openMember('${members[0].id}')">
+    return `<g style="cursor:pointer" onclick="window.openMember('${members[0].id}')">
       <circle cx="${px}" cy="${py}" r="${r+5}" fill="${members[0].color||'#E8633A'}" opacity="0.12"/>
       <circle cx="${px}" cy="${py}" r="${r}" fill="${members[0].color||'#E8633A'}" opacity="0.88"/>
       ${avatarRows}
@@ -1155,7 +1282,7 @@ function buildMap() {
     </div>
     <div class="map-legend">
       ${S.members.map(m=>`
-        <div class="leg-row" onclick="openMember('${m.id}')">
+        <div class="leg-row" onclick="window.openMember('${m.id}')">
           <div style="font-size:20px">${m.avatar||'🌻'}</div>
           <div class="leg-info"><div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div><div class="leg-city">${m.city||'City not set'}</div></div>
           ${m.nextCity?`<div class="leg-next"><span style="color:var(--accent)">→</span> ${m.nextCity}</div>`:''}
@@ -1179,7 +1306,7 @@ function buildChat() {
 
   el.innerHTML = `
     <div style="background:#fff;border-bottom:1px solid #E0D8CC;flex-shrink:0;overflow-x:auto;display:flex;scrollbar-width:none;">
-      ${chatTabs.map(t=>`<button class="chat-tab${S.activeChatTab===t.id?' act':''}" onclick="switchChatTab('${t.id}')">${t.label}</button>`).join('')}
+      ${chatTabs.map(t=>`<button class="chat-tab${S.activeChatTab===t.id?' act':''}" onclick="window.switchChatTab('${t.id}')">${t.label}</button>`).join('')}
     </div>
     <div class="chat-msgs" id="chatMsgs" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px;min-height:0;"></div>
     <div style="flex-shrink:0;background:#fff;border-top:1px solid #E0D8CC;padding:12px 14px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
@@ -1276,7 +1403,7 @@ function buildProfile() {
         <div><div class="profile-name">${m.name}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">${m.handle}</div></div>
       </div>
       <div style="font-size:13px;color:var(--text2);line-height:1.5">${m.bio||'No bio yet'}</div>
-      <button class="edit-btn" onclick="openEditModal()">Edit Profile</button>
+      <button class="edit-btn" onclick="window.openEditModal()"">Edit Profile</button>
     </div>
     <div class="lbl">Location</div>
     <div class="card"><div class="loc-grid">
@@ -1360,7 +1487,7 @@ window.openMember = function(id) {
   const isSelf = m.id === S.userId;
   document.getElementById('shAdminActions').innerHTML = (isAdmin && !isSelf) ? `
     <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);">
-      <button onclick="removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}') "
+      <button onclick="window.removeMember('${m.id}','${m.name.replace(/'/g,"\\'")}') "
         style="background:none;border:1.5px solid var(--red);border-radius:var(--r-sm);padding:13px;
         font-family:Outfit,sans-serif;font-size:13px;font-weight:600;color:var(--red);
         cursor:pointer;width:100%;transition:background 0.15s;">
@@ -1397,14 +1524,14 @@ function buildSettings() {
 
     <div class="lbl">Group</div>
     <div class="set-group">
-      <div class="set-row" style="cursor:pointer;" onclick="editGroupName()">
+      <div class="set-row" style="cursor:pointer;" onclick="window.editGroupName()"">
         <div>
           <div class="set-lbl">Group name</div>
           <div class="set-val">${gData?.name || 'My Crew'}</div>
         </div>
         <div style="color:var(--text3);font-size:18px;">›</div>
       </div>
-      <div class="set-row" style="cursor:pointer;" onclick="editGroupTotem()">
+      <div class="set-row" style="cursor:pointer;" onclick="window.editGroupTotem()"">
         <div>
           <div class="set-lbl">Group totem</div>
           <div class="set-val" style="font-size:22px;">${gData?.totem || '🦅'}</div>
@@ -1446,7 +1573,8 @@ function buildSettings() {
     </div>
 
     <div class="lbl">Danger Zone</div>
-    <button class="danger-btn" onclick="leaveGroup()">Leave Group</button>
+    <button class="danger-btn" style="margin-bottom:10px;" onclick="window.signOutUser()">Sign Out</button>
+    <button class="danger-btn" onclick="window.leaveGroup()">Leave Group</button>
     <div style="height:40px;"></div>`;
 
   buildSettingsInts();
@@ -1510,10 +1638,10 @@ window.editGroupTotem = function() {
       </div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Pick a symbol for your crew — shows on the map and in the group badge.</div>
       <div class="totem-grid" id="groupTotemGrid">
-        ${TOTEMS.map(t => `<button class="totem-opt${t===S.groupData?.totem?' sel':''}" onclick="selectGroupTotem('${t}')">${t}</button>`).join('')}
+        ${TOTEMS.map(t => `<button class="totem-opt${t===S.groupData?.totem?' sel':''}" onclick="window.selectGroupTotem('${t}')">${t}</button>`).join('')}
       </div>
       <div style="text-align:center;font-size:48px;margin:16px 0;" id="groupTotemPreview">${S.groupData?.totem||'🦅'}</div>
-      <button class="save-btn" onclick="saveGroupTotem()">SAVE TOTEM</button>
+      <button class="save-btn" onclick="window.saveGroupTotem()">SAVE TOTEM</button>
     </div>`;
   document.getElementById('app').appendChild(modal);
 };
@@ -1542,6 +1670,50 @@ window.leaveGroup = function() {
     location.reload();
   }
 };
+
+window.signOutUser = async function() {
+  if (!confirm('Sign out of Totem?')) return;
+  await FA.signOut(window._auth);
+  localStorage.removeItem('totem_gid');
+  location.reload();
+};
+
+// ─── EXPOSE ALL HTML-CALLABLE FUNCTIONS TO WINDOW ────────────────────────────
+// Required because all JS is in a module scope — onclick handlers need window.*
+window.showTab = window.showTab; // already set
+window.addEvent = addEvent;
+window.toggleRsvp = toggleRsvp;
+window.dropPin = dropPin;
+window.clearPin = clearPin;
+window.saveProfile = window.saveProfile; // already set
+window.openEditModal = window.openEditModal; // already set
+window.closeEditModal = window.closeEditModal; // already set
+window.openMember = window.openMember; // already set
+window.closeMemberSheet = window.closeMemberSheet; // already set
+window.removeMember = window.removeMember; // already set
+window.openEditEvent = window.openEditEvent; // already set
+window.saveEditEvent = window.saveEditEvent; // already set
+window.deleteEvent = window.deleteEvent; // already set
+window.openEventChat = window.openEventChat; // already set
+window.switchChatTab = window.switchChatTab; // already set
+window.sendMsg = window.sendMsg; // already set
+window.editGroupName = window.editGroupName; // already set
+window.editGroupTotem = window.editGroupTotem; // already set
+window.selectGroupTotem = window.selectGroupTotem; // already set
+window.saveGroupTotem = window.saveGroupTotem; // already set
+window.leaveGroup = window.leaveGroup; // already set
+window._setFilter = window._setFilter; // already set
+window._setCityFilter = window._setCityFilter; // already set
+window._togNotif = window._togNotif; // already set
+window._togSettingsInt = window._togSettingsInt; // already set
+window._ob = window._ob; // already set
+window._obTotem = window._obTotem; // already set
+window._obAvatar = window._obAvatar; // already set
+window._obInt = window._obInt; // already set
+window._pickEditAvatar = window._pickEditAvatar; // already set
+
+// Now expose the ones that were plain functions (not already on window)
+window.showTab = showTab;
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 boot();
