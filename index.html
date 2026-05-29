@@ -195,8 +195,8 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 /* EVENTS */
 .filter-strip{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;}
 .filter-strip::-webkit-scrollbar{display:none;}
-.fchip{background:#FFFFFF;border:2px solid #C8BFB0;border-radius:20px;padding:8px 16px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;white-space:nowrap;transition:all 0.15s;-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;}
-.fchip:hover{border-color:#E8633A;color:#E8633A;}
+.fchip{background:#FFFFFF !important;border:2px solid #C8BFB0 !important;border-radius:20px;padding:8px 16px;font-family:'Outfit',sans-serif !important;font-size:13px !important;font-weight:700 !important;color:#1A1612 !important;cursor:pointer;white-space:nowrap;transition:all 0.15s;-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;line-height:1.2;}
+.fchip:hover{border-color:#E8633A !important;color:#E8633A !important;}
 .fchip.act{background:#E8633A !important;border-color:#E8633A !important;color:#FFFFFF !important;box-shadow:0 2px 8px rgba(232,99,58,0.35);}
 .ev-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;animation:fadeUp 0.2s ease both;}
 .ev-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
@@ -386,6 +386,24 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
     <div id="tab-chat" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;"></div>
     <div id="tab-profile" class="content" style="display:none;flex:1;"></div>
     <div id="tab-settings" class="content" style="display:none;flex:1;"></div>
+  </div>
+
+  <!-- EVENT DETAIL SHEET -->
+  <div class="overlay" id="eventSheet" style="display:none;" onclick="window.closeEventSheet()">
+    <div class="sheet" onclick="event.stopPropagation()" style="padding-bottom:48px;">
+      <div class="sh-handle"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div style="flex:1;">
+          <div id="evShName" style="font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;letter-spacing:-0.3px;line-height:1.3;"></div>
+          <div id="evShBadge" style="margin-top:8px;"></div>
+        </div>
+        <button class="close-btn" onclick="window.closeEventSheet()" style="flex-shrink:0;margin-left:12px;">×</button>
+      </div>
+      <div id="evShMeta" style="font-size:13px;color:#A09488;display:flex;flex-direction:column;gap:5px;margin-bottom:16px;"></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:12px;">Who's Going</div>
+      <div id="evShGoing"></div>
+      <div id="evShActions" style="margin-top:20px;display:flex;gap:10px;"></div>
+    </div>
   </div>
 
   <!-- MEMBER SHEET -->
@@ -914,12 +932,13 @@ function buildSquad() {
     el.innerHTML = `<div class="sec-hdr"><div class="sec-title">Your Crew</div></div><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Your crew will appear here once they join.<br><br>Share your invite code from Settings!</div></div>`;
     return;
   }
-  const upcoming = S.events.filter(e=>e.going?.includes(S.userId));
+  const activeEvents = S.events.filter(e => !e.deleted);
+  const upcoming = activeEvents.filter(e => e.going?.includes(S.userId));
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Your Crew</div><div class="sec-sub">${members.length} member${members.length!==1?'s':''}</div></div>
     ${upcoming.length ? `<div class="info-banner">🎪 You're going to ${upcoming.length} upcoming event${upcoming.length!==1?'s':''}!</div>` : ''}
     ${members.map((m,i)=>{
-      const evCount = S.events.filter(e=>e.going?.includes(m.id)).length;
+      const evCount = activeEvents.filter(e=>e.going?.includes(m.id)).length;
       return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
         <div class="m-row">
           <div class="m-av" style="background:${m.color||'#E8633A'}20">${m.avatar||'🌻'}</div>
@@ -1030,7 +1049,7 @@ function buildEvents() {
       const names = going.slice(0,2).map(m=>m.name.split(' ')[0]).join(', ')+(going.length>2?` +${going.length-2} more`:'');
       return `<div class="ev-card" style="animation-delay:${i*0.04}s">
         <div class="ev-top">
-          <div class="ev-name">${ev.name}</div>
+          <div class="ev-name" style="cursor:pointer;" onclick="window.openEventSheet('${ev.id}')">${ev.name}</div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
             <div class="ev-badge ${ev.type||'show'}">${ev.type==='fest'?'Festival':ev.type==='other'?'Event':'Show'}</div>
             ${canEdit?`<button style="background:none;border:none;font-size:14px;cursor:pointer;color:var(--text3);padding:2px 4px;" onclick="window.openEditEvent('${ev.id}')" title="Edit">✏️</button>`:''}
@@ -1510,72 +1529,116 @@ window.removeMember = async function(memberId, memberName) {
   }
 };
 
+window.openEventSheet = function(evId) {
+  const ev = S.events.find(e => e.id === evId);
+  if (!ev) return;
+  const going = (ev.going || []).map(id => S.members.find(m => m.id === id)).filter(Boolean);
+  const iGo = (ev.going || []).includes(S.userId);
+  const canEdit = ev.addedBy === S.userId || S.groupData?.adminId === S.userId;
+
+  document.getElementById('evShName').textContent = ev.name;
+  document.getElementById('evShBadge').innerHTML = `<span style="font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:4px 9px;border-radius:10px;${ev.type==='fest'?'background:#EEF5E8;color:#3A7A2E;':'background:#FDF0EB;color:#E8633A;'}">${ev.type==='fest'?'Festival':ev.type==='other'?'Event':'Show'}</span>`;
+
+  document.getElementById('evShMeta').innerHTML = [
+    ev.date ? `<span>📅 ${formatDateDisplay(ev.date)}</span>` : '',
+    ev.city ? `<span>📍 ${ev.city}</span>` : '',
+    ev.venue ? `<span>🏟 ${ev.venue}</span>` : '',
+  ].filter(Boolean).join('');
+
+  document.getElementById('evShGoing').innerHTML = going.length === 0
+    ? `<div style="font-size:13px;color:#A09488;padding:10px 0;">No one going yet — be the first!</div>`
+    : going.map(m => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E0D8CC;cursor:pointer;" onclick="window.closeEventSheet();window.openMember('${m.id}')">
+        <div style="width:40px;height:40px;border-radius:12px;background:${m.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${m.avatar}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;color:#1A1612;">${m.name}${m.id===S.userId?' (You)':''}</div>
+          <div style="font-size:12px;color:#A09488;margin-top:2px;">${m.city||''}</div>
+        </div>
+        <div style="font-size:16px;color:#C8BFB0;">›</div>
+      </div>`).join('');
+
+  document.getElementById('evShActions').innerHTML = `
+    <button onclick="window.toggleRsvp('${ev.id}',${iGo});window.closeEventSheet();"
+      style="flex:1;background:${iGo?'#ECF5F1':'#E8633A'};border:${iGo?'1px solid #B5D9CE':'none'};border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${iGo?'#2A7A5E':'white'};cursor:pointer;">
+      ${iGo ? '✓ Going' : '+ I\'m In'}
+    </button>
+    <button onclick="window.closeEventSheet();window.openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}');"
+      style="flex:1;background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;">
+      💬 Chat
+    </button>
+    ${canEdit ? `<button onclick="window.closeEventSheet();window.openEditEvent('${ev.id}');"
+      style="background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;">
+      ✏️
+    </button>` : ''}`;
+
+  document.getElementById('eventSheet').style.display = 'flex';
+};
+
+window.closeEventSheet = function() {
+  document.getElementById('eventSheet').style.display = 'none';
+};
+
 window.closeMemberSheet = function() { document.getElementById('memberSheet').style.display='none'; };
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function buildSettings() {
   const gData = S.groupData;
-  const isAdmin = gData?.adminId === S.userId;
   const groupId = S.groupId || '';
   const inviteUrl = groupId ? `${window.location.origin}${window.location.pathname}?join=${groupId}` : '';
+  const groupName = gData?.name || S.groupData?.name || 'My Crew';
+  const groupTotem = gData?.totem || S.groupData?.totem || '🦅';
 
   document.getElementById('tab-settings').innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Settings</div></div>
 
     <div class="lbl">Group</div>
-    <div class="set-group">
-      <div class="set-row" style="cursor:pointer;" onclick="window.editGroupName()">
+    <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #E0D8CC;cursor:pointer;" onclick="window.editGroupName()">
         <div>
-          <div class="set-lbl">Group name</div>
-          <div class="set-val">${gData?.name || 'My Crew'}</div>
+          <div style="font-size:14px;font-weight:600;color:#1A1612;">Group name</div>
+          <div style="font-size:13px;color:#A09488;margin-top:3px;">${groupName}</div>
         </div>
-        <div style="color:var(--text3);font-size:18px;">›</div>
+        <div style="color:#A09488;font-size:20px;">›</div>
       </div>
-      <div class="set-row" style="cursor:pointer;" onclick="window.editGroupTotem()">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;" onclick="window.editGroupTotem()">
         <div>
-          <div class="set-lbl">Group totem</div>
-          <div class="set-val" style="font-size:22px;">${gData?.totem || '🦅'}</div>
+          <div style="font-size:14px;font-weight:600;color:#1A1612;">Group totem</div>
+          <div style="font-size:24px;margin-top:3px;">${groupTotem}</div>
         </div>
-        <div style="color:var(--text3);font-size:18px;">›</div>
+        <div style="color:#A09488;font-size:20px;">›</div>
       </div>
     </div>
 
     <div class="lbl">Invite Link</div>
-    <div class="set-group">
-      <div style="padding:14px 16px;">
-        <div class="set-lbl" style="margin-bottom:10px;">Share with your crew</div>
-        ${inviteUrl ? `
-        <div class="invite-box">
-          <span class="invite-url">${inviteUrl}</span>
-          <button class="copy-btn" id="copyInviteBtn" onclick="
-            navigator.clipboard.writeText('${inviteUrl}').then(()=>{
-              document.getElementById('copyInviteBtn').textContent='Copied!';
-              setTimeout(()=>document.getElementById('copyInviteBtn').textContent='Copy',2000);
-            });
-          ">Copy</button>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;">Anyone with this link will be taken straight into your group.</div>
-        ` : '<div style="font-size:13px;color:var(--text3);">Loading invite link…</div>'}
+    <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:12px;padding:16px;">
+      <div style="font-size:14px;font-weight:600;color:#1A1612;margin-bottom:10px;">Share with your crew</div>
+      ${inviteUrl ? `
+      <div style="background:#EEE8DE;border:1.5px dashed #C8BFB0;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span style="font-size:11px;color:#A09488;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${inviteUrl}</span>
+        <button id="copyInviteBtn" onclick="navigator.clipboard.writeText('${inviteUrl}').then(()=>{document.getElementById('copyInviteBtn').textContent='Copied!';setTimeout(()=>document.getElementById('copyInviteBtn').textContent='Copy',2000)})"
+          style="background:#FDF0EB;border:none;border-radius:6px;padding:7px 14px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:#E8633A;cursor:pointer;white-space:nowrap;flex-shrink:0;">Copy</button>
       </div>
+      <div style="font-size:11px;color:#A09488;margin-top:8px;line-height:1.6;">Anyone with this link joins your group directly.</div>
+      ` : `<div style="font-size:13px;color:#A09488;">Loading…</div>`}
     </div>
 
     <div class="lbl">Group Interests</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5;">Toggle what your crew is into — drives event suggestions for everyone.</div>
+    <div style="font-size:13px;color:#6B6258;margin-bottom:12px;line-height:1.5;">Toggle what your crew is into — drives event suggestions for everyone.</div>
     <div class="int-grid" id="settingsIntGrid"></div>
 
     <div class="lbl">Notifications</div>
-    <div class="set-group">
+    <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:12px;">
       ${[['messages','New chat messages'],['events','Event suggestions'],['joins','Member joins']].map(([k,label])=>`
-        <div class="set-row" style="cursor:default;">
-          <div class="set-lbl">${label}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #E0D8CC;">
+          <div style="font-size:14px;font-weight:500;color:#1A1612;">${label}</div>
           <button class="toggle${S.notifs[k]?' on':''}" id="tog-${k}" onclick="window._togNotif('${k}')"></button>
         </div>`).join('')}
     </div>
 
     <div class="lbl">Danger Zone</div>
-    <button class="danger-btn" style="margin-bottom:10px;" onclick="window.signOutUser()">Sign Out</button>
-    <button class="danger-btn" onclick="window.leaveGroup()">Leave Group</button>
-    <div style="height:40px;"></div>`;
+    <button onclick="window.signOutUser()" style="background:none;border:1.5px solid #E53E3E;border-radius:10px;padding:14px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:#E53E3E;cursor:pointer;width:100%;margin-bottom:10px;">Sign Out</button>
+    <button onclick="window.leaveGroup()" style="background:none;border:1.5px solid #E53E3E;border-radius:10px;padding:14px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:#E53E3E;cursor:pointer;width:100%;">Leave Group</button>
+    <div style="height:60px;"></div>`;
 
   buildSettingsInts();
 }
@@ -1713,6 +1776,8 @@ window._obInt = window._obInt; // already set
 window._pickEditAvatar = window._pickEditAvatar; // already set
 
 // Now expose the ones that were plain functions (not already on window)
+window.openEventSheet = window.openEventSheet;
+window.closeEventSheet = window.closeEventSheet;
 window.showTab = showTab;
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
