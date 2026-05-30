@@ -922,7 +922,7 @@ async function loadApp() {
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/events`, events => {
     S.events = events;
     buildSquad(); // rebuild squad so event counts update
-    if (document.getElementById('tab-events').style.display !== 'none') buildEvents();
+    buildEvents(); // always rebuild so first load shows events
     buildChat(); // refresh chat tabs when events change
   })); // sorted client-side by dateTs
 
@@ -1076,22 +1076,28 @@ function buildEvents() {
       <button class="add-btn" onclick="window.addEvent()">ADD EVENT + RSVP GOING</button>
     </div>
 
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;white-space:nowrap;">📍 CITY</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">📍 CITY</div>
     </div>
-    <div class="filter-strip" style="margin-bottom:10px;">
-      <div class="fchip${!S.activeCity||S.activeCity==='all'?' act':''}" onclick="window._setCityFilter('all')">All Cities</div>
-      ${eventCities.map(c=>`<div class="fchip${S.activeCity===c?' act':''}" onclick="window._setCityFilter('${c.replace(/'/g,"\\'")}')">${c.split(',')[0]}</div>`).join('')}
-    </div>
-
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;white-space:nowrap;">🎵 TYPE</div>
-    </div>
-    <div class="filter-strip" style="margin-bottom:14px;">
-      ${interestChips.map(c=>`<div class="fchip${S.activeInterest===c.id?' act':''}" onclick="window._setFilter('${c.id}')">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</div>`).join('')}
+    <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
+      ${[{v:'all',l:'All Cities'}, ...eventCities.map(c=>({v:c,l:c.split(',')[0]}))].map(({v,l}) => {
+        const active = (!S.activeCity||S.activeCity==='all') ? v==='all' : S.activeCity===v;
+        return `<div onclick="window._setCityFilter('${v.replace(/'/g,"\\'")}'" style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border:2px solid ${active?'#E8633A':'#C8BFB0'};">${l}</div>`;
+      }).join('')}
     </div>
 
-    ${filtered.length===0?`<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">No events match your filters.<br>Try a different city or type.</div></div>`:''}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">🎵 TYPE</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
+      ${interestChips.map(c => {
+        const active = S.activeInterest === c.id;
+        return `<div onclick="window._setFilter('${c.id}')" style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border:2px solid ${active?'#E8633A':'#C8BFB0'};">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</div>`;
+      }).join('')}
+    </div>
+
+    ${filtered.length===0 && S.events.length===0 ? `<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading events…</div></div>` :
+      filtered.length===0 ? `<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">No events match your filters.<br>Try a different city or type.</div></div>` : ''}
     ${filtered.map((ev,i)=>{
       const going = (ev.going||[]).map(id=>S.members.find(m=>m.id===id)).filter(Boolean);
       const iGo = (ev.going||[]).includes(S.userId);
