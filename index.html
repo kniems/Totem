@@ -1079,22 +1079,12 @@ function buildEvents() {
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">📍 CITY</div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
-      ${[{v:'all',l:'All Cities'}, ...eventCities.map(c=>({v:c,l:c.split(',')[0]}))].map(({v,l}) => {
-        const active = (!S.activeCity||S.activeCity==='all') ? v==='all' : S.activeCity===v;
-        return `<div onclick="window._setCityFilter('${v.replace(/'/g,"\\'")}'" style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border:2px solid ${active?'#E8633A':'#C8BFB0'};">${l}</div>`;
-      }).join('')}
-    </div>
+    <div id="cityFilterStrip" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;"></div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">🎵 TYPE</div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;">
-      ${interestChips.map(c => {
-        const active = S.activeInterest === c.id;
-        return `<div onclick="window._setFilter('${c.id}')" style="flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border:2px solid ${active?'#E8633A':'#C8BFB0'};">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</div>`;
-      }).join('')}
-    </div>
+    <div id="typeFilterStrip" style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;"></div>
 
     ${filtered.length===0 && S.events.length===0 ? `<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading events…</div></div>` :
       filtered.length===0 ? `<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">No events match your filters.<br>Try a different city or type.</div></div>` : ''}
@@ -1128,10 +1118,36 @@ function buildEvents() {
         </div>
       </div>`;
     }).join('')}`;
+  buildFilterChips(eventCities, interestChips);
 }
 
-window._setFilter = function(id) { S.activeInterest=id; buildEvents(); };
-window._setCityFilter = function(city) { S.activeCity=city; buildEvents(); };
+function buildFilterChips(eventCities, interestChips) {
+  const cityStrip = document.getElementById('cityFilterStrip');
+  const typeStrip = document.getElementById('typeFilterStrip');
+  if (!cityStrip || !typeStrip) return;
+
+  // City chips
+  cityStrip.innerHTML = '';
+  [{v:'all', l:'All Cities'}, ...eventCities.map(c=>({v:c, l:c.split(',')[0]}))].forEach(({v, l}) => {
+    const active = (!S.activeCity || S.activeCity==='all') ? v==='all' : S.activeCity===v;
+    const chip = document.createElement('div');
+    chip.textContent = l;
+    chip.style.cssText = `flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;border-width:2px;border-style:solid;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border-color:${active?'#E8633A':'#C8BFB0'};`;
+    chip.addEventListener('click', () => { S.activeCity = v; buildEvents(); });
+    cityStrip.appendChild(chip);
+  });
+
+  // Type chips
+  typeStrip.innerHTML = '';
+  interestChips.forEach(c => {
+    const active = S.activeInterest === c.id;
+    const chip = document.createElement('div');
+    chip.textContent = (c.emoji ? c.emoji + ' ' : '') + (c.label || 'All Types');
+    chip.style.cssText = `flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;border-width:2px;border-style:solid;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border-color:${active?'#E8633A':'#C8BFB0'};`;
+    chip.addEventListener('click', () => { S.activeInterest = c.id; buildEvents(); });
+    typeStrip.appendChild(chip);
+  });
+}
 
 async function addEvent() {
   const name = document.getElementById('evName')?.value.trim();
@@ -1464,7 +1480,16 @@ function buildChat() {
     ...myEvents.map(e=>({id:e.id,label:`# ${e.name.length>14?e.name.slice(0,14)+'…':e.name}`})),
   ];
 
-  el.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;';
+  // Only set flex layout if the tab is actually visible — don't override display:none
+  if (el.style.display !== 'none') {
+    el.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;';
+  } else {
+    // Still update the innerHTML so tabs are ready, but keep hidden
+    el.style.flexDirection = 'column';
+    el.style.flex = '1';
+    el.style.minHeight = '0';
+    el.style.overflow = 'hidden';
+  }
 
   el.innerHTML = `
     <div style="background:#fff;border-bottom:1px solid #E0D8CC;flex-shrink:0;overflow-x:auto;display:flex;scrollbar-width:none;">
