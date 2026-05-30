@@ -921,6 +921,7 @@ async function loadApp() {
 
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/events`, events => {
     S.events = events;
+    buildSquad(); // rebuild squad so event counts update
     if (document.getElementById('tab-events').style.display !== 'none') buildEvents();
     buildChat(); // refresh chat tabs when events change
   })); // sorted client-side by dateTs
