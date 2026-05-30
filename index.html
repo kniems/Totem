@@ -914,7 +914,8 @@ async function loadApp() {
   // Live listeners
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/members`, members => {
     S.members = members;
-    if (document.getElementById('tab-squad').style.display !== 'none') buildSquad();
+    buildSquad();
+    buildMap();
     if (document.getElementById('tab-map').style.display !== 'none') buildMap();
   })); // no orderBy — members don't have server timestamps
 
@@ -1298,6 +1299,17 @@ window.clearPin = clearPin;
 // ─── MAP ──────────────────────────────────────────────────────────────────────
 function buildMap() {
   const el = document.getElementById('tab-map');
+  if (!el) return;
+
+  // If members not loaded yet, show loading and wait
+  if (!S.members || S.members.length === 0) {
+    el.innerHTML = `
+      <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
+      <div class="map-wrap" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
+        <div style="text-align:center;color:#A09488;font-size:13px;">Loading crew locations…</div>
+      </div>`;
+    return;
+  }
 
   // Group members by city using fuzzy matching
   const cityGroups = {};
@@ -1352,7 +1364,11 @@ function buildMap() {
       ${S.members.map(m=>`
         <div class="leg-row" onclick="window.openMember('${m.id}')">
           <div style="font-size:20px">${m.avatar||'🌻'}</div>
-          <div class="leg-info"><div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div><div class="leg-city">${m.city||'City not set'}</div></div>
+          <div class="leg-info">
+            <div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div>
+            <div class="leg-city">${m.city||'⚠️ No city set'}</div>
+            ${!getCityCoords(m.city) && m.city ? `<div style="font-size:10px;color:#E8633A;">City not on map — re-save in Profile</div>` : ''}
+          </div>
           ${m.nextCity?`<div class="leg-next"><span style="color:var(--accent)">→</span> ${m.nextCity}</div>`:''}
         </div>`).join('')}
     </div>
