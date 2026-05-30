@@ -377,6 +377,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
         <button class="nav-btn" onclick="window.showTab('chat',this)">Chat</button>
         <button class="nav-btn" onclick="window.showTab('profile',this)">Profile</button>
         <button class="nav-btn" onclick="window.showTab('settings',this)">Settings</button>
+        <button class="nav-btn" id="adminNavBtn" style="display:none;color:#7A5EA7;" onclick="window.showTab('admin',this)">⚡ Admin</button>
       </div>
     </div>
     <div id="tab-squad" class="content" style="flex:1;"></div>
@@ -386,6 +387,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
     <div id="tab-chat" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;"></div>
     <div id="tab-profile" class="content" style="display:none;flex:1;"></div>
     <div id="tab-settings" class="content" style="display:none;flex:1;"></div>
+    <div id="tab-admin" class="content" style="display:none;flex:1;"></div>
   </div>
 
   <!-- EVENT DETAIL SHEET -->
@@ -865,6 +867,13 @@ async function loadApp() {
   document.getElementById('hdrTotem').textContent = gData.totem || '🦅';
   document.getElementById('hdrName').textContent = gData.name || 'My Crew';
 
+  // Reveal admin backdoor only for master account
+  const MASTER_UID = 'ZfI2rVLFHJPnk0TTBF7OGfTvxsh2';
+  if (S.userId === MASTER_UID) {
+    const adminBtn = document.getElementById('adminNavBtn');
+    if (adminBtn) adminBtn.style.display = 'block';
+  }
+
   document.getElementById('loading').style.display='none';
   document.getElementById('mainApp').style.display='flex';
 
@@ -910,7 +919,7 @@ async function loadApp() {
 window.showTab = function(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('act'));
   btn.classList.add('act');
-  ['squad','events','pin','map','chat','profile','settings'].forEach(t => {
+  ['squad','events','pin','map','chat','profile','settings','admin'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (!el) return;
     if (t === name) {
@@ -922,6 +931,7 @@ window.showTab = function(name, btn) {
   });
   if (name === 'chat') { buildChat(); setTimeout(scrollChatToBottom, 100); }
   if (name === 'settings') buildSettings();
+  if (name === 'admin') buildAdminPanel();
 };
 
 // ─── SQUAD ────────────────────────────────────────────────────────────────────
@@ -1583,6 +1593,98 @@ window.closeEventSheet = function() {
 };
 
 window.closeMemberSheet = function() { document.getElementById('memberSheet').style.display='none'; };
+
+// ─── ADMIN PANEL (master account only) ────────────────────────────────────────
+const MASTER_UID = 'ZfI2rVLFHJPnk0TTBF7OGfTvxsh2';
+
+async function buildAdminPanel() {
+  if (S.userId !== MASTER_UID) return;
+  const el = document.getElementById('tab-admin');
+  el.innerHTML = '<div style="padding:20px;font-size:14px;color:#A09488;">Loading all groups…</div>';
+
+  try {
+    // Load all groups
+    const groupsSnap = await F.getDocs(F.collection(db, 'groups'));
+    const groups = groupsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+    // For each group load member count
+    const groupDetails = await Promise.all(groups.map(async g => {
+      const membersSnap = await F.getDocs(F.collection(db, 'groups', g.id, 'members'));
+      const eventsSnap = await F.getDocs(F.collection(db, 'groups', g.id, 'events'));
+      return {
+        ...g,
+        memberCount: membersSnap.size,
+        members: membersSnap.docs.map(d => d.data()),
+        eventCount: eventsSnap.docs.filter(d => !d.data().deleted).length,
+      };
+    }));
+
+    const html = [];
+    html.push('<div style="padding:18px 18px 0;display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;">');
+    html.push('<div style="font-family:Unbounded,sans-serif;font-size:17px;font-weight:700;color:#7A5EA7;">⚡ Admin</div>');
+    html.push('<div style="font-size:12px;color:#A09488;">' + groupDetails.length + ' groups</div>');
+    html.push('</div>');
+
+    html.push('<div style="padding:0 18px;">');
+    html.push('<div style="background:#F3EEF8;border:1.5px solid #C4A8E8;border-radius:10px;padding:10px 14px;font-size:12px;color:#7A5EA7;margin-bottom:16px;line-height:1.5;">🔒 Backdoor — only visible to you</div>');
+
+    // Stats bar
+    const totalMembers = groupDetails.reduce((a, g) => a + g.memberCount, 0);
+    const totalEvents = groupDetails.reduce((a, g) => a + g.eventCount, 0);
+    html.push('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">');
+    html.push('<div style="background:#fff;border:2px solid #E0D8CC;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#1A1612;">' + groupDetails.length + '</div><div style="font-size:10px;color:#A09488;font-weight:700;letter-spacing:0.5px;margin-top:2px;">GROUPS</div></div>');
+    html.push('<div style="background:#fff;border:2px solid #E0D8CC;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#1A1612;">' + totalMembers + '</div><div style="font-size:10px;color:#A09488;font-weight:700;letter-spacing:0.5px;margin-top:2px;">MEMBERS</div></div>');
+    html.push('<div style="background:#fff;border:2px solid #E0D8CC;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:700;color:#1A1612;">' + totalEvents + '</div><div style="font-size:10px;color:#A09488;font-weight:700;letter-spacing:0.5px;margin-top:2px;">EVENTS</div></div>');
+    html.push('</div>');
+
+    // Group cards
+    groupDetails.sort((a, b) => (b.memberCount - a.memberCount)).forEach(g => {
+      html.push('<div style="background:#fff;border:2px solid #E0D8CC;border-radius:16px;padding:16px;margin-bottom:12px;">');
+
+      // Header
+      html.push('<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">');
+      html.push('<div style="font-size:28px;">' + (g.totem || '🦅') + '</div>');
+      html.push('<div style="flex:1;"><div style="font-size:15px;font-weight:700;color:#1A1612;">' + (g.name || 'Unnamed') + '</div><div style="font-size:11px;color:#A09488;margin-top:2px;">ID: ' + g.id + '</div></div>');
+      html.push('<div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#E8633A;">' + g.memberCount + ' members</div><div style="font-size:11px;color:#A09488;">' + g.eventCount + ' events</div></div>');
+      html.push('</div>');
+
+      // Interests
+      if (g.interests && g.interests.length) {
+        html.push('<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">');
+        g.interests.forEach(i => {
+          const int = ALL_INTERESTS.find(a => a.id === i);
+          if (int) html.push('<span style="background:#F6F1E9;border:1px solid #E0D8CC;border-radius:20px;padding:3px 9px;font-size:10px;font-weight:600;color:#6B6258;">' + int.emoji + ' ' + int.label + '</span>');
+        });
+        html.push('</div>');
+      }
+
+      // Members list
+      if (g.members && g.members.length) {
+        html.push('<div style="border-top:1px solid #E8E2D9;padding-top:10px;">');
+        html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1px;color:#A09488;margin-bottom:8px;">MEMBERS</div>');
+        g.members.forEach(m => {
+          html.push('<div style="display:flex;align-items:center;gap:8px;padding:5px 0;">');
+          html.push('<div style="font-size:18px;">' + (m.avatar || '🌻') + '</div>');
+          html.push('<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#1A1612;">' + (m.name || 'Unknown') + '</div><div style="font-size:11px;color:#A09488;">' + (m.city || 'No city') + '</div></div>');
+          if (m.id === g.adminId) html.push('<span style="font-size:9px;font-weight:700;background:#FDF0EB;color:#E8633A;padding:2px 7px;border-radius:10px;">ADMIN</span>');
+          html.push('</div>');
+        });
+        html.push('</div>');
+      }
+
+      html.push('</div>');
+    });
+
+    html.push('<div style="height:60px;"></div>');
+    html.push('</div>');
+
+    el.innerHTML = html.join('');
+
+  } catch(e) {
+    console.error('Admin panel error:', e);
+    el.innerHTML = '<div style="padding:20px;font-size:14px;color:#E53E3E;">Error loading admin data: ' + e.message + '</div>';
+  }
+}
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function buildSettings() {
