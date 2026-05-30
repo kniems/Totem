@@ -195,9 +195,8 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 /* EVENTS */
 .filter-strip{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;}
 .filter-strip::-webkit-scrollbar{display:none;}
-.fchip{background:#FFFFFF !important;border:2px solid #C8BFB0 !important;border-radius:20px;padding:8px 16px;font-family:'Outfit',sans-serif !important;font-size:13px !important;font-weight:700 !important;color:#1A1612 !important;cursor:pointer;white-space:nowrap;transition:all 0.15s;-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;line-height:1.2;}
-.fchip:hover{border-color:#E8633A !important;color:#E8633A !important;}
-.fchip.act{background:#E8633A !important;border-color:#E8633A !important;color:#FFFFFF !important;box-shadow:0 2px 8px rgba(232,99,58,0.35);}
+.fchip{background:#FFFFFF;border:2px solid #C8BFB0;border-radius:20px;padding:8px 16px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;white-space:nowrap;transition:all 0.15s;display:inline-flex;align-items:center;line-height:1.2;user-select:none;-webkit-user-select:none;}
+.fchip.act{background:#E8633A;border-color:#E8633A;color:#FFFFFF;box-shadow:0 2px 8px rgba(232,99,58,0.35);}
 .ev-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;animation:fadeUp 0.2s ease both;}
 .ev-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
 .ev-name{font-weight:700;font-size:15px;line-height:1.3;flex:1;}
@@ -472,11 +471,46 @@ const ALL_INTERESTS = [
   {id:"comedy",label:"Comedy",emoji:"🎭"},{id:"film",label:"Film",emoji:"🎬"},
 ];
 const CITY_COORDS = {
+  // Midwest
   "Chicago, IL":{x:56,y:36},"Evanston, IL":{x:57,y:33},"Oak Park, IL":{x:54,y:38},
-  "Detroit, MI":{x:63,y:32},"Milwaukee, WI":{x:54,y:28},"Nashville, TN":{x:58,y:53},
-  "New York, NY":{x:73,y:36},"Los Angeles, CA":{x:13,y:52},"Austin, TX":{x:48,y:65},
-  "Seattle, WA":{x:10,y:22},"Denver, CO":{x:36,y:44},"Atlanta, GA":{x:60,y:58},
+  "Detroit, MI":{x:63,y:32},"Milwaukee, WI":{x:54,y:28},"Indianapolis, IN":{x:58,y:40},
+  "Columbus, OH":{x:63,y:38},"Cleveland, OH":{x:64,y:34},"Cincinnati, OH":{x:61,y:41},
+  "Kansas City, MO":{x:48,y:43},"St. Louis, MO":{x:53,y:42},"Minneapolis, MN":{x:50,y:26},
+  // Northeast
+  "New York, NY":{x:73,y:36},"Philadelphia, PA":{x:72,y:37},"Boston, MA":{x:77,y:30},
+  "Baltimore, MD":{x:72,y:39},"Washington, DC":{x:72,y:40},"Pittsburgh, PA":{x:67,y:36},
+  "Richmond, VA":{x:72,y:42},"Raleigh, NC":{x:70,y:46},
+  // South
+  "Nashville, TN":{x:58,y:47},"Atlanta, GA":{x:61,y:54},"Charlotte, NC":{x:67,y:48},
+  "Memphis, TN":{x:54,y:50},"New Orleans, LA":{x:54,y:64},"Louisville, KY":{x:60,y:42},
+  "Miami, FL":{x:66,y:74},"Tampa, FL":{x:63,y:69},"Orlando, FL":{x:64,y:67},
+  "Houston, TX":{x:48,y:67},"Dallas, TX":{x:47,y:60},"Austin, TX":{x:47,y:64},
+  "San Antonio, TX":{x:46,y:67},
+  // West
+  "Denver, CO":{x:37,y:44},"Phoenix, AZ":{x:28,y:57},"Las Vegas, NV":{x:21,y:50},
+  "Salt Lake City, UT":{x:28,y:38},"Portland, OR":{x:11,y:24},"Seattle, WA":{x:11,y:20},
+  "Los Angeles, CA":{x:14,y:54},"San Francisco, CA":{x:10,y:44},"Oakland, CA":{x:10,y:44},
+  "San Diego, CA":{x:17,y:58},"Sacramento, CA":{x:12,y:40},
+  // Fest venues
+  "Bonnaroo (Manchester, TN)":{x:59,y:49},"Coachella (Indio, CA)":{x:20,y:57},
+  "Lollapalooza (Chicago, IL)":{x:56,y:36},"Outside Lands (San Francisco, CA)":{x:10,y:44},
 };
+
+// Fuzzy city lookup — handles "chicago", "Chicago IL", "chicago, il" etc.
+function getCityCoords(cityStr) {
+  if (!cityStr) return null;
+  // Exact match first
+  if (CITY_COORDS[cityStr]) return CITY_COORDS[cityStr];
+  // Normalize and try again
+  const norm = cityStr.trim().toLowerCase().replace(/\s+/g,' ');
+  for (const key of Object.keys(CITY_COORDS)) {
+    if (key.toLowerCase() === norm) return CITY_COORDS[key];
+    // Match just the city name part before the comma
+    const cityPart = key.split(',')[0].toLowerCase();
+    if (cityPart === norm || norm.startsWith(cityPart)) return CITY_COORDS[key];
+  }
+  return null;
+}
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let S = {
@@ -1041,18 +1075,18 @@ function buildEvents() {
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);white-space:nowrap;">📍 City</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;white-space:nowrap;">📍 CITY</div>
     </div>
     <div class="filter-strip" style="margin-bottom:10px;">
-      <button class="fchip${!S.activeCity||S.activeCity==='all'?' act':''}" onclick="window._setCityFilter('all')">All Cities</button>
-      ${eventCities.map(c=>`<button class="fchip${S.activeCity===c?' act':''}" onclick="window._setCityFilter('${c.replace(/'/g,"\\'")}')">${c.split(',')[0]}</button>`).join('')}
+      <div class="fchip${!S.activeCity||S.activeCity==='all'?' act':''}" onclick="window._setCityFilter('all')">All Cities</div>
+      ${eventCities.map(c=>`<div class="fchip${S.activeCity===c?' act':''}" onclick="window._setCityFilter('${c.replace(/'/g,"\\'")}')">${c.split(',')[0]}</div>`).join('')}
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);white-space:nowrap;">🎵 Type</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;white-space:nowrap;">🎵 TYPE</div>
     </div>
     <div class="filter-strip" style="margin-bottom:14px;">
-      ${interestChips.map(c=>`<button class="fchip${S.activeInterest===c.id?' act':''}" onclick="window._setFilter('${c.id}')">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</button>`).join('')}
+      ${interestChips.map(c=>`<div class="fchip${S.activeInterest===c.id?' act':''}" onclick="window._setFilter('${c.id}')">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</div>`).join('')}
     </div>
 
     ${filtered.length===0?`<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">No events match your filters.<br>Try a different city or type.</div></div>`:''}
@@ -1265,13 +1299,14 @@ window.clearPin = clearPin;
 function buildMap() {
   const el = document.getElementById('tab-map');
 
-  // Group members by city
+  // Group members by city using fuzzy matching
   const cityGroups = {};
   S.members.forEach(m => {
-    const pos = CITY_COORDS[m.city];
+    const pos = getCityCoords(m.city);
     if (!pos) return;
-    if (!cityGroups[m.city]) cityGroups[m.city] = {pos, members:[]};
-    cityGroups[m.city].members.push(m);
+    const key = m.city;
+    if (!cityGroups[key]) cityGroups[key] = {pos, members:[]};
+    cityGroups[key].members.push(m);
   });
 
   // Build SVG city pins — stacked when multiple members in same city
@@ -1295,7 +1330,7 @@ function buildMap() {
     </g>`;
   }).join('');
 
-  const unknownMembers = S.members.filter(m=>!CITY_COORDS[m.city]);
+  const unknownMembers = S.members.filter(m=>!getCityCoords(m.city));
 
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
@@ -1706,8 +1741,8 @@ function buildSettings() {
   // GROUP
   html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">GROUP</div>');
   html.push('<div style="background:#FFFFFF;border:2px solid #D8D0C4;border-radius:16px;overflow:hidden;margin-bottom:16px;">');
-  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:2px solid #E8E2D9;cursor:pointer;" onclick="window.editGroupName()"><div><div style="font-size:12px;font-weight:700;color:#A09488;letter-spacing:0.5px;margin-bottom:4px;">GROUP NAME</div><div style="font-size:16px;font-weight:600;color:#1A1612;">' + groupName + '</div></div><div style="color:#C8BFB0;font-size:22px;">&#8250;</div></div>');
-  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;cursor:pointer;" onclick="window.editGroupTotem()"><div><div style="font-size:12px;font-weight:700;color:#A09488;letter-spacing:0.5px;margin-bottom:4px;">GROUP TOTEM</div><div style="font-size:28px;line-height:1;">' + groupTotem + '</div></div><div style="color:#C8BFB0;font-size:22px;">&#8250;</div></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:2px solid #E8E2D9;cursor:pointer;min-height:64px;" onclick="window.editGroupName()"><div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#A09488;letter-spacing:0.5px;margin-bottom:4px;display:block;">GROUP NAME</div><div style="font-size:16px;font-weight:600;color:#1A1612;display:block;">' + groupName + '</div></div><div style="color:#C8BFB0;font-size:22px;flex-shrink:0;">&#8250;</div></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;cursor:pointer;min-height:72px;" onclick="window.editGroupTotem()"><div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#A09488;letter-spacing:0.5px;margin-bottom:4px;display:block;">GROUP TOTEM</div><div style="font-size:28px;line-height:1.2;display:block;">' + groupTotem + '</div></div><div style="color:#C8BFB0;font-size:22px;flex-shrink:0;">&#8250;</div></div>');
   html.push('</div>');
 
   // INVITE LINK
