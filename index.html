@@ -995,10 +995,14 @@ function buildEvents() {
   // Get unique cities that have events
   const eventCities = [...new Set(allEvents.map(e=>e.city).filter(Boolean))].sort();
 
-  // Apply both filters
+  // Apply filters — city and interest are independent, both default to 'all'
   let filtered = allEvents;
-  if (S.activeCity && S.activeCity !== 'all') filtered = filtered.filter(e=>e.city===S.activeCity);
-  if (S.activeInterest && S.activeInterest !== 'all') filtered = filtered.filter(e=>e.interests?.includes(S.activeInterest));
+  if (S.activeCity && S.activeCity !== 'all') {
+    filtered = filtered.filter(e => e.city === S.activeCity);
+  }
+  if (S.activeInterest && S.activeInterest !== 'all') {
+    filtered = filtered.filter(e => e.interests?.includes(S.activeInterest));
+  }
 
   const interestChips = [{id:'all',label:'All Types',emoji:''},...ALL_INTERESTS.filter(i=>S.interests.includes(i.id))];
 
@@ -1023,7 +1027,7 @@ function buildEvents() {
         <option value="show">Show</option>
         <option value="other">Other Event</option>
       </select>
-      <button class="add-btn" onclick="window.addEvent()"">ADD EVENT + RSVP GOING</button>
+      <button class="add-btn" onclick="window.addEvent()">ADD EVENT + RSVP GOING</button>
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -1584,61 +1588,79 @@ window.closeMemberSheet = function() { document.getElementById('memberSheet').st
 function buildSettings() {
   const gData = S.groupData;
   const groupId = S.groupId || '';
-  const inviteUrl = groupId ? `${window.location.origin}${window.location.pathname}?join=${groupId}` : '';
-  const groupName = gData?.name || S.groupData?.name || 'My Crew';
-  const groupTotem = gData?.totem || S.groupData?.totem || '🦅';
+  const inviteUrl = groupId ? window.location.origin + window.location.pathname + '?join=' + groupId : '';
+  const groupName = gData && gData.name ? gData.name : 'My Crew';
+  const groupTotem = gData && gData.totem ? gData.totem : '🦅';
 
-  document.getElementById('tab-settings').innerHTML = `
-    <div class="sec-hdr"><div class="sec-title">Settings</div></div>
+  if (!gData && groupId) {
+    document.getElementById('tab-settings').innerHTML = '<div style="text-align:center;padding:60px 20px;color:#A09488;font-size:14px;">Loading settings\u2026</div>';
+    setTimeout(buildSettings, 600);
+    return;
+  }
 
-    <div class="lbl">Group</div>
-    <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #E0D8CC;cursor:pointer;" onclick="window.editGroupName()">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:#1A1612;">Group name</div>
-          <div style="font-size:13px;color:#A09488;margin-top:3px;">${groupName}</div>
-        </div>
-        <div style="color:#A09488;font-size:20px;">›</div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;" onclick="window.editGroupTotem()">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:#1A1612;">Group totem</div>
-          <div style="font-size:24px;margin-top:3px;">${groupTotem}</div>
-        </div>
-        <div style="color:#A09488;font-size:20px;">›</div>
-      </div>
-    </div>
+  const html = [];
+  html.push('<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px;"><div style="font-family:Unbounded,sans-serif;font-size:17px;font-weight:700;">Settings</div></div>');
 
-    <div class="lbl">Invite Link</div>
-    <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:12px;padding:16px;">
-      <div style="font-size:14px;font-weight:600;color:#1A1612;margin-bottom:10px;">Share with your crew</div>
-      ${inviteUrl ? `
-      <div style="background:#EEE8DE;border:1.5px dashed #C8BFB0;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <span style="font-size:11px;color:#A09488;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${inviteUrl}</span>
-        <button id="copyInviteBtn" onclick="navigator.clipboard.writeText('${inviteUrl}').then(()=>{document.getElementById('copyInviteBtn').textContent='Copied!';setTimeout(()=>document.getElementById('copyInviteBtn').textContent='Copy',2000)})"
-          style="background:#FDF0EB;border:none;border-radius:6px;padding:7px 14px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;color:#E8633A;cursor:pointer;white-space:nowrap;flex-shrink:0;">Copy</button>
-      </div>
-      <div style="font-size:11px;color:#A09488;margin-top:8px;line-height:1.6;">Anyone with this link joins your group directly.</div>
-      ` : `<div style="font-size:13px;color:#A09488;">Loading…</div>`}
-    </div>
+  // GROUP
+  html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">GROUP</div>');
+  html.push('<div style="background:#FFFFFF;border:2px solid #D8D0C4;border-radius:16px;overflow:hidden;margin-bottom:16px;">');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:2px solid #E8E2D9;cursor:pointer;" onclick="window.editGroupName()"><div><div style="font-size:12px;font-weight:700;color:#A09488;letter-spacing:0.5px;margin-bottom:4px;">GROUP NAME</div><div style="font-size:16px;font-weight:600;color:#1A1612;">' + groupName + '</div></div><div style="color:#C8BFB0;font-size:22px;">&#8250;</div></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;cursor:pointer;" onclick="window.editGroupTotem()"><div><div style="font-size:12px;font-weight:700;color:#A09488;letter-spacing:0.5px;margin-bottom:4px;">GROUP TOTEM</div><div style="font-size:28px;line-height:1;">' + groupTotem + '</div></div><div style="color:#C8BFB0;font-size:22px;">&#8250;</div></div>');
+  html.push('</div>');
 
-    <div class="lbl">Group Interests</div>
-    <div style="font-size:13px;color:#6B6258;margin-bottom:12px;line-height:1.5;">Toggle what your crew is into — drives event suggestions for everyone.</div>
-    <div class="int-grid" id="settingsIntGrid"></div>
+  // INVITE LINK
+  html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">INVITE LINK</div>');
+  html.push('<div style="background:#FFFFFF;border:2px solid #D8D0C4;border-radius:16px;padding:16px;margin-bottom:16px;">');
+  html.push('<div style="font-size:15px;font-weight:600;color:#1A1612;margin-bottom:12px;">Share with your crew</div>');
+  if (inviteUrl) {
+    // rendered dynamically below
+  }
+  html.push('<div id="inviteLinkBox"></div>');
+  html.push('<div style="font-size:12px;color:#A09488;margin-top:10px;line-height:1.6;">Anyone with this link joins your group directly.</div>');
+  html.push('</div>');
 
-    <div class="lbl">Notifications</div>
-    <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:12px;">
-      ${[['messages','New chat messages'],['events','Event suggestions'],['joins','Member joins']].map(([k,label])=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #E0D8CC;">
-          <div style="font-size:14px;font-weight:500;color:#1A1612;">${label}</div>
-          <button class="toggle${S.notifs[k]?' on':''}" id="tog-${k}" onclick="window._togNotif('${k}')"></button>
-        </div>`).join('')}
-    </div>
+  // INTERESTS
+  html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">GROUP INTERESTS</div>');
+  html.push('<div style="font-size:13px;color:#6B6258;margin-bottom:12px;line-height:1.5;">Toggle what your crew is into.</div>');
+  html.push('<div class="int-grid" id="settingsIntGrid"></div>');
 
-    <div class="lbl">Danger Zone</div>
-    <button onclick="window.signOutUser()" style="background:none;border:1.5px solid #E53E3E;border-radius:10px;padding:14px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:#E53E3E;cursor:pointer;width:100%;margin-bottom:10px;">Sign Out</button>
-    <button onclick="window.leaveGroup()" style="background:none;border:1.5px solid #E53E3E;border-radius:10px;padding:14px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:#E53E3E;cursor:pointer;width:100%;">Leave Group</button>
-    <div style="height:60px;"></div>`;
+  // NOTIFICATIONS  
+  html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-top:20px;margin-bottom:10px;">NOTIFICATIONS</div>');
+  html.push('<div style="background:#FFFFFF;border:2px solid #D8D0C4;border-radius:16px;overflow:hidden;margin-bottom:16px;">');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #E8E2D9;"><div style="font-size:15px;font-weight:500;color:#1A1612;">New chat messages</div><button class="toggle' + (S.notifs.messages?' on':'') + '" id="tog-messages" onclick="window._togNotif('messages')"></button></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #E8E2D9;"><div style="font-size:15px;font-weight:500;color:#1A1612;">Event suggestions</div><button class="toggle' + (S.notifs.events?' on':'') + '" id="tog-events" onclick="window._togNotif('events')"></button></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;"><div style="font-size:15px;font-weight:500;color:#1A1612;">Member joins</div><button class="toggle' + (S.notifs.joins?' on':'') + '" id="tog-joins" onclick="window._togNotif('joins')"></button></div>');
+  html.push('</div>');
+
+  // DANGER ZONE
+  html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">DANGER ZONE</div>');
+  html.push('<button onclick="window.signOutUser()" style="background:#FFFFFF;border:2px solid #E53E3E;border-radius:12px;padding:16px;font-family:Outfit,sans-serif;font-size:15px;font-weight:600;color:#E53E3E;cursor:pointer;width:100%;margin-bottom:10px;">Sign Out</button>');
+  html.push('<button onclick="window.leaveGroup()" style="background:#FFFFFF;border:2px solid #E53E3E;border-radius:12px;padding:16px;font-family:Outfit,sans-serif;font-size:15px;font-weight:600;color:#E53E3E;cursor:pointer;width:100%;">Leave Group</button>');
+  html.push('<div style="height:60px;"></div>');
+
+  document.getElementById('tab-settings').innerHTML = html.join('');
+
+  // Populate invite link box safely
+  const box = document.getElementById('inviteLinkBox');
+  if (box && inviteUrl) {
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'background:#F6F1E9;border:2px dashed #C8BFB0;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;';
+    const urlSpan = document.createElement('span');
+    urlSpan.style.cssText = 'font-size:11px;color:#6B6258;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;';
+    urlSpan.textContent = inviteUrl;
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.style.cssText = 'background:#E8633A;border:none;border-radius:8px;padding:8px 16px;font-family:Outfit,sans-serif;font-size:12px;font-weight:700;color:white;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+    copyBtn.onclick = function() {
+      navigator.clipboard.writeText(inviteUrl).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+      });
+    };
+    wrapper.appendChild(urlSpan);
+    wrapper.appendChild(copyBtn);
+    box.appendChild(wrapper);
+  }
 
   buildSettingsInts();
 }
