@@ -246,8 +246,6 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .clear-pin{background:none;border:1px solid var(--accent);border-radius:var(--r-xs);padding:6px 12px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;}
 
 /* MAP */
-.map-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px;}
-.map-svg{width:100%;display:block;}
 .map-legend{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
 .leg-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;}
 .leg-row:last-child{border-bottom:none;}
@@ -256,6 +254,8 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .leg-name{font-weight:600;font-size:13px;}
 .leg-city{font-size:11px;color:var(--text3);margin-top:1px;}
 .leg-next{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;}
+.totem-tooltip{background:white;border:1px solid #E0D8CC;border-radius:8px;padding:6px 10px;font-family:'Outfit',sans-serif;font-size:12px;color:#1A1612;box-shadow:0 2px 10px rgba(0,0,0,0.1);}
+.totem-tooltip::before{display:none;}
 
 /* CHAT */
 .chat-tabs{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;flex-shrink:0;}
@@ -1301,65 +1301,29 @@ function buildMap() {
   const el = document.getElementById('tab-map');
   if (!el) return;
 
-  // If members not loaded yet, show loading and wait
   if (!S.members || S.members.length === 0) {
     el.innerHTML = `
       <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
-      <div class="map-wrap" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
+      <div style="background:#fff;border:1px solid #E0D8CC;border-radius:16px;display:flex;align-items:center;justify-content:center;min-height:220px;margin-bottom:14px;">
         <div style="text-align:center;color:#A09488;font-size:13px;">Loading crew locations…</div>
       </div>`;
     return;
   }
 
-  // Group members by city using fuzzy matching
+  // Group members by city
   const cityGroups = {};
   S.members.forEach(m => {
     const pos = getCityCoords(m.city);
     if (!pos) return;
-    const key = m.city;
-    if (!cityGroups[key]) cityGroups[key] = {pos, members:[]};
-    cityGroups[key].members.push(m);
+    if (!cityGroups[m.city]) cityGroups[m.city] = {pos, members:[]};
+    cityGroups[m.city].members.push(m);
   });
 
-  // Build SVG city pins — stacked when multiple members in same city
-  const pins = Object.entries(cityGroups).map(([city, {pos, members}]) => {
-    const px = pos.x * 2, py = pos.y * 1.32;
-    const count = members.length;
-    const r = count > 1 ? 14 : 11;
-    const avatarRows = count === 1
-      ? `<text x="${px}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="9">${members[0].avatar||'🌻'}</text>`
-      : count === 2
-        ? `<text x="${px-5}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="7">${members[0].avatar||'🌻'}</text>
-           <text x="${px+5}" y="${py}" text-anchor="middle" dominant-baseline="central" font-size="7">${members[1].avatar||'🌻'}</text>`
-        : `<text x="${px-6}" y="${py-3}" text-anchor="middle" dominant-baseline="central" font-size="6">${members[0].avatar||'🌻'}</text>
-           <text x="${px+6}" y="${py-3}" text-anchor="middle" dominant-baseline="central" font-size="6">${members[1].avatar||'🌻'}</text>
-           <text x="${px}" y="${py+5}" text-anchor="middle" dominant-baseline="central" font-size="6">${count>3?`+${count-2}`:members[2].avatar||'🌻'}</text>`;
-    return `<g style="cursor:pointer" onclick="window.openMember('${members[0].id}')">
-      <circle cx="${px}" cy="${py}" r="${r+5}" fill="${members[0].color||'#E8633A'}" opacity="0.12"/>
-      <circle cx="${px}" cy="${py}" r="${r}" fill="${members[0].color||'#E8633A'}" opacity="0.88"/>
-      ${avatarRows}
-      <text x="${px}" y="${py+r+7}" text-anchor="middle" font-size="4.5" fill="#5A5450" font-family="Outfit,sans-serif" font-weight="600">${city.split(',')[0].toUpperCase()}</text>
-    </g>`;
-  }).join('');
-
-  const unknownMembers = S.members.filter(m=>!getCityCoords(m.city));
+  const unknownMembers = S.members.filter(m => !getCityCoords(m.city));
 
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
-    <div class="map-wrap">
-      <svg viewBox="0 0 200 140" style="width:100%;display:block;">
-        <rect width="200" height="140" fill="#DCE8DC"/>
-        <path d="M30 48 L55 40 L82 37 L110 35 L138 33 L162 30 L174 36 L179 46 L176 57 L168 64 L162 72 L153 81 L138 88 L125 94 L108 94 L92 91 L73 90 L57 92 L42 89 L33 82 L27 70 L26 58 Z" fill="#C4D8C0" stroke="#AEBFAA" stroke-width="0.6"/>
-        <path d="M143 88 L147 95 L149 104 L147 112 L144 114 L141 110 L139 97 Z" fill="#C4D8C0" stroke="#AEBFAA" stroke-width="0.6"/>
-        <ellipse cx="138" cy="40" rx="9" ry="4" fill="#8FBFD4" opacity="0.7"/>
-        <ellipse cx="152" cy="44" rx="5" ry="3" fill="#8FBFD4" opacity="0.7"/>
-        <ellipse cx="122" cy="38" rx="5" ry="2.5" fill="#8FBFD4" opacity="0.7"/>
-        ${[40,55,70,85,100].map(y=>`<line x1="22" y1="${y}" x2="182" y2="${y}" stroke="#B8C8B4" stroke-width="0.2"/>`).join('')}
-        ${[50,75,100,125,150].map(x=>`<line x1="${x}" y1="28" x2="${x}" y2="128" stroke="#B8C8B4" stroke-width="0.2"/>`).join('')}
-        ${pins}
-        ${Object.keys(cityGroups).length===0?`<text x="100" y="72" text-anchor="middle" font-size="7" fill="#A09488" font-family="Outfit,sans-serif">Members appear once they set their city</text>`:''}
-      </svg>
-    </div>
+    <div id="leafletMap" style="width:100%;height:280px;border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;z-index:0;"></div>
     <div class="map-legend">
       ${S.members.map(m=>`
         <div class="leg-row" onclick="window.openMember('${m.id}')">
@@ -1367,13 +1331,120 @@ function buildMap() {
           <div class="leg-info">
             <div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div>
             <div class="leg-city">${m.city||'⚠️ No city set'}</div>
-            ${!getCityCoords(m.city) && m.city ? `<div style="font-size:10px;color:#E8633A;">City not on map — re-save in Profile</div>` : ''}
+            ${!getCityCoords(m.city) && m.city ? `<div style="font-size:10px;color:#E8633A;">Re-save city in Profile to appear on map</div>` : ''}
           </div>
           ${m.nextCity?`<div class="leg-next"><span style="color:var(--accent)">→</span> ${m.nextCity}</div>`:''}
         </div>`).join('')}
     </div>
-    ${unknownMembers.length?`<div style="margin-top:10px;font-size:12px;color:var(--text3);padding:10px 14px;background:var(--surface2);border-radius:var(--r-sm);">📍 ${unknownMembers.map(m=>m.name).join(', ')} — update city in Profile to appear on map</div>`:''}`;
+    ${unknownMembers.length ? `<div style="margin-top:10px;font-size:12px;color:#A09488;padding:10px 14px;background:#EEE8DE;border-radius:10px;">📍 ${unknownMembers.map(m=>m.name).join(', ')} — re-save city in Profile to appear on map</div>` : ''}`;
+
+  // Build Leaflet map
+  initLeafletMap(cityGroups);
 }
+
+// Lat/lng for real map
+const CITY_LATLNG = {
+  "Chicago, IL":[41.878,-87.63],"Evanston, IL":[42.045,-87.687],"Oak Park, IL":[41.885,-87.785],
+  "Detroit, MI":[42.331,-83.046],"Milwaukee, WI":[43.049,-87.906],"Indianapolis, IN":[39.768,-86.158],
+  "Columbus, OH":[39.961,-82.999],"Cleveland, OH":[41.499,-81.695],"Cincinnati, OH":[39.103,-84.512],
+  "Kansas City, MO":[39.099,-94.578],"St. Louis, MO":[38.627,-90.197],"Minneapolis, MN":[44.977,-93.265],
+  "New York, NY":[40.713,-74.006],"Philadelphia, PA":[39.952,-75.164],"Boston, MA":[42.36,-71.059],
+  "Baltimore, MD":[39.290,-76.612],"Washington, DC":[38.907,-77.036],"Pittsburgh, PA":[40.440,-79.996],
+  "Richmond, VA":[37.541,-77.434],"Raleigh, NC":[35.779,-78.638],
+  "Nashville, TN":[36.174,-86.767],"Atlanta, GA":[33.749,-84.388],"Charlotte, NC":[35.227,-80.843],
+  "Memphis, TN":[35.149,-90.048],"New Orleans, LA":[29.951,-90.071],"Louisville, KY":[38.252,-85.758],
+  "Miami, FL":[25.774,-80.194],"Tampa, FL":[27.948,-82.458],"Orlando, FL":[28.538,-81.379],
+  "Houston, TX":[29.760,-95.370],"Dallas, TX":[32.776,-96.797],"Austin, TX":[30.267,-97.743],
+  "Denver, CO":[39.739,-104.984],"Phoenix, AZ":[33.448,-112.074],"Las Vegas, NV":[36.175,-115.137],
+  "Salt Lake City, UT":[40.761,-111.891],"Portland, OR":[45.523,-122.676],"Seattle, WA":[47.606,-122.332],
+  "Los Angeles, CA":[34.052,-118.244],"San Francisco, CA":[37.774,-122.419],"Oakland, CA":[37.804,-122.271],
+  "San Diego, CA":[32.715,-117.157],"Sacramento, CA":[38.581,-121.494],
+  "Bonnaroo (Manchester, TN)":[35.485,-86.068],"Coachella (Indio, CA)":[33.720,-116.217],
+  "Lollapalooza (Chicago, IL)":[41.870,-87.618],"Outside Lands (San Francisco, CA)":[37.770,-122.510],
+};
+
+function getCityLatLng(cityStr) {
+  if (!cityStr) return null;
+  if (CITY_LATLNG[cityStr]) return CITY_LATLNG[cityStr];
+  const norm = cityStr.trim().toLowerCase();
+  for (const key of Object.keys(CITY_LATLNG)) {
+    if (key.toLowerCase() === norm) return CITY_LATLNG[key];
+    if (key.split(',')[0].toLowerCase() === norm.split(',')[0].trim()) return CITY_LATLNG[key];
+  }
+  return null;
+}
+
+let leafletMap = null;
+
+function initLeafletMap(cityGroups) {
+  // Load Leaflet if not already loaded
+  if (!window.L) {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => renderLeaflet(cityGroups);
+    document.head.appendChild(script);
+  } else {
+    renderLeaflet(cityGroups);
+  }
+}
+
+function renderLeaflet(cityGroups) {
+  const mapEl = document.getElementById('leafletMap');
+  if (!mapEl) return;
+
+  // Destroy old map instance if exists
+  if (leafletMap) { try { leafletMap.remove(); } catch(e){} leafletMap = null; }
+
+  // Calculate center from members
+  const allLatLngs = Object.entries(cityGroups).map(([city]) => getCityLatLng(city)).filter(Boolean);
+  const centerLat = allLatLngs.length ? allLatLngs.reduce((s,ll)=>s+ll[0],0)/allLatLngs.length : 39.5;
+  const centerLng = allLatLngs.length ? allLatLngs.reduce((s,ll)=>s+ll[1],0)/allLatLngs.length : -98.35;
+  const zoom = allLatLngs.length === 1 ? 8 : 4;
+
+  leafletMap = L.map('leafletMap', {zoomControl:false, attributionControl:false}).setView([centerLat, centerLng], zoom);
+
+  // Warm, muted map tiles
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom:19, subdomains:'abcd'
+  }).addTo(leafletMap);
+
+  // Add a pin for each city group
+  Object.entries(cityGroups).forEach(([city, {members}]) => {
+    const ll = getCityLatLng(city);
+    if (!ll) return;
+    const names = members.map(m=>m.name.split(' ')[0]).join(', ');
+    const avatars = members.slice(0,3).map(m=>m.avatar||'🌻').join('');
+    const color = members[0].color || '#E8633A';
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:${color};
+        border:3px solid white;
+        border-radius:50%;
+        width:${members.length>1?44:36}px;
+        height:${members.length>1?44:36}px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:${members.length>1?14:18}px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.25);
+        cursor:pointer;
+      ">${avatars}</div>`,
+      iconSize: [members.length>1?44:36, members.length>1?44:36],
+      iconAnchor: [members.length>1?22:18, members.length>1?22:18],
+    });
+
+    const marker = L.marker(ll, {icon}).addTo(leafletMap);
+    marker.bindTooltip(`<b>${city.split(',')[0]}</b><br>${names}`, {
+      permanent:false, direction:'top', className:'totem-tooltip'
+    });
+  });
+}
+
+  // initLeafletMap called above — SVG map replaced
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 let chatUnsubs = {};
