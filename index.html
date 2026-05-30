@@ -1627,9 +1627,9 @@ function buildSettings() {
   // NOTIFICATIONS  
   html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-top:20px;margin-bottom:10px;">NOTIFICATIONS</div>');
   html.push('<div style="background:#FFFFFF;border:2px solid #D8D0C4;border-radius:16px;overflow:hidden;margin-bottom:16px;">');
-  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #E8E2D9;"><div style="font-size:15px;font-weight:500;color:#1A1612;">New chat messages</div><button class="toggle' + (S.notifs.messages?' on':'') + '" id="tog-messages" onclick="window._togNotif('messages')"></button></div>');
-  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #E8E2D9;"><div style="font-size:15px;font-weight:500;color:#1A1612;">Event suggestions</div><button class="toggle' + (S.notifs.events?' on':'') + '" id="tog-events" onclick="window._togNotif('events')"></button></div>');
-  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;"><div style="font-size:15px;font-weight:500;color:#1A1612;">Member joins</div><button class="toggle' + (S.notifs.joins?' on':'') + '" id="tog-joins" onclick="window._togNotif('joins')"></button></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #E8E2D9;"><div style="font-size:15px;font-weight:500;color:#1A1612;">New chat messages</div><button class="toggle' + (S.notifs.messages?' on':'') + '" id="tog-messages" onclick="window._togNotif(\'messages\')"></button></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #E8E2D9;"><div style="font-size:15px;font-weight:500;color:#1A1612;">Event suggestions</div><button class="toggle' + (S.notifs.events?' on':'') + '" id="tog-events" onclick="window._togNotif(\'events\')"></button></div>');
+  html.push('<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;"><div style="font-size:15px;font-weight:500;color:#1A1612;">Member joins</div><button class="toggle' + (S.notifs.joins?' on':'') + '" id="tog-joins" onclick="window._togNotif(\'joins\')"></button></div>');
   html.push('</div>');
 
   // DANGER ZONE
