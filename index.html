@@ -1159,12 +1159,11 @@ function buildEvents() {
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">📍 CITY</div>
     </div>
-    <div id="cityFilterStrip" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;"></div>
-
+    <div id="cityFilterStrip" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">🎵 TYPE</div>
     </div>
-    <div id="typeFilterStrip" style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;"></div>
+    <div id="typeFilterStrip" style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
 
     ${filtered.length===0 && S.events.length===0 ? `<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading events…</div></div>` :
       filtered.length===0 && S.showPast ? `<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">No past events yet.</div></div>` :
@@ -1207,59 +1206,20 @@ function buildFilterChips(eventCities, interestChips) {
   const typeStrip = document.getElementById('typeFilterStrip');
   if (!cityStrip || !typeStrip) return;
 
-  // City chips
-  cityStrip.innerHTML = '';
-  [{v:'all', l:'All Cities'}, ...eventCities.map(c=>({v:c, l:c.split(',')[0]}))].forEach(({v, l}) => {
-    const active = (!S.activeCity || S.activeCity==='all') ? v==='all' : S.activeCity===v;
-    const chip = document.createElement('div');
-    chip.style.display = 'inline-flex';
-    chip.style.alignItems = 'center';
-    chip.style.flexShrink = '0';
-    chip.style.padding = '8px 16px';
-    chip.style.borderRadius = '20px';
-    chip.style.cursor = 'pointer';
-    chip.style.whiteSpace = 'nowrap';
-    chip.style.marginRight = '8px';
-    chip.style.border = `2px solid ${active ? '#E8633A' : '#555'}`;
-    chip.style.backgroundColor = active ? '#E8633A' : '#555';
-    const txt = document.createElement('span');
-    txt.textContent = l;
-    txt.style.fontSize = '13px';
-    txt.style.fontWeight = '700';
-    txt.style.fontFamily = "'Outfit', sans-serif";
-    txt.style.color = '#FFFFFF';
-    txt.style.pointerEvents = 'none';
-    chip.appendChild(txt);
-    chip.addEventListener('click', () => { S.activeCity = v; buildEvents(); });
-    cityStrip.appendChild(chip);
-  });
+  // Use <a> tags — browsers ALWAYS render text in anchor tags correctly
+  const chipStyle = (active) =>
+    `display:inline-block;padding:8px 16px;border-radius:20px;border:2px solid ${active?'#E8633A':'#555555'};background:${active?'#E8633A':'#555555'};text-decoration:none;font-size:13px;font-weight:700;font-family:Outfit,sans-serif;color:#ffffff !important;white-space:nowrap;cursor:pointer;margin-right:8px;-webkit-text-fill-color:#ffffff;`;
 
-  // Type chips
-  typeStrip.innerHTML = '';
-  interestChips.forEach(c => {
+  const cityChips = [{v:'all', l:'All Cities'}, ...eventCities.map(c=>({v:c, l:c.split(',')[0]}))];
+  cityStrip.innerHTML = cityChips.map(({v, l}) => {
+    const active = (!S.activeCity || S.activeCity==='all') ? v==='all' : S.activeCity===v;
+    return `<a href="javascript:void(0)" style="${chipStyle(active)}" onclick="S.activeCity='${v.replace(/'/g,"\\'")}';buildEvents();return false;">${l}</a>`;
+  }).join('');
+
+  typeStrip.innerHTML = interestChips.map(c => {
     const active = S.activeInterest === c.id;
-    const chip = document.createElement('div');
-    chip.style.display = 'inline-flex';
-    chip.style.alignItems = 'center';
-    chip.style.flexShrink = '0';
-    chip.style.padding = '8px 16px';
-    chip.style.borderRadius = '20px';
-    chip.style.cursor = 'pointer';
-    chip.style.whiteSpace = 'nowrap';
-    chip.style.marginRight = '8px';
-    chip.style.border = `2px solid ${active ? '#E8633A' : '#555'}`;
-    chip.style.backgroundColor = active ? '#E8633A' : '#555';
-    const txt = document.createElement('span');
-    txt.textContent = (c.emoji ? c.emoji + ' ' : '') + (c.label || 'All Types');
-    txt.style.fontSize = '13px';
-    txt.style.fontWeight = '700';
-    txt.style.fontFamily = "'Outfit', sans-serif";
-    txt.style.color = '#FFFFFF';
-    txt.style.pointerEvents = 'none';
-    chip.appendChild(txt);
-    chip.addEventListener('click', () => { S.activeInterest = c.id; buildEvents(); });
-    typeStrip.appendChild(chip);
-  });
+    return `<a href="javascript:void(0)" style="${chipStyle(active)}" onclick="S.activeInterest='${c.id}';buildEvents();return false;">${c.emoji?c.emoji+' ':''}${c.label||'All Types'}</a>`;
+  }).join('');
 }
 
 async function addEvent() {
@@ -2608,6 +2568,8 @@ window.saveGroupTotem = window.saveGroupTotem; // already set
 window.leaveGroup = window.leaveGroup; // already set
 window._setFilter = window._setFilter; // already set
 window._setCityFilter = window._setCityFilter; // already set
+window.buildEvents = buildEvents;
+window.S = S;
 window._setShowPast = function(past) { S.showPast=past; S.activeCity='all'; S.activeInterest='all'; buildEvents(); };
 window._toggleAddEvent = function() {
   const form = document.getElementById('addEventForm');
