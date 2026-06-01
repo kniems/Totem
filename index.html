@@ -1040,7 +1040,11 @@ function buildSquad() {
       const evCount = activeEvents.filter(e=>e.going?.includes(m.id)).length;
       return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
         <div class="m-row">
-          <div class="m-av" style="background:${m.color||'#E8633A'}20">${m.avatar||'🌻'}</div>
+          <div class="m-av" style="background:${m.color||'#E8633A'}20;overflow:hidden;border-radius:13px;">
+            ${m.photoUrl
+              ? `<img src="${m.photoUrl}" style="width:46px;height:46px;object-fit:cover;border-radius:13px;" onerror="this.outerHTML='<span style=font-size:22px>${m.avatar||'🌻'}</span>'">`
+              : `<span style="font-size:22px;">${m.avatar||'🌻'}</span>`}
+          </div>
           <div class="m-info">
             <div class="m-name">${m.name||'Member'}${m.id===S.userId?'<span class="admin-badge">You</span>':''}</div>
             <div class="m-handle">${m.handle||''}</div>
@@ -1220,9 +1224,9 @@ function buildFilterChips(eventCities, interestChips) {
     chip.style.whiteSpace = 'nowrap';
     chip.style.borderWidth = '2px';
     chip.style.borderStyle = 'solid';
-    chip.style.backgroundColor = active ? '#E8633A' : '#FFFFFF';
-    chip.style.color = active ? '#FFFFFF' : '#1A1612';
-    chip.style.borderColor = active ? '#E8633A' : '#C8BFB0';
+    chip.style.backgroundColor = active ? '#E8633A' : '#3A3530';
+    chip.style.color = '#FFFFFF';
+    chip.style.borderColor = active ? '#E8633A' : '#3A3530';
     chip.style.marginRight = '8px';
     chip.addEventListener('click', () => { S.activeCity = v; buildEvents(); });
     cityStrip.appendChild(chip);
@@ -1245,9 +1249,9 @@ function buildFilterChips(eventCities, interestChips) {
     chip.style.whiteSpace = 'nowrap';
     chip.style.borderWidth = '2px';
     chip.style.borderStyle = 'solid';
-    chip.style.backgroundColor = active ? '#E8633A' : '#FFFFFF';
-    chip.style.color = active ? '#FFFFFF' : '#1A1612';
-    chip.style.borderColor = active ? '#E8633A' : '#C8BFB0';
+    chip.style.backgroundColor = active ? '#E8633A' : '#3A3530';
+    chip.style.color = '#FFFFFF';
+    chip.style.borderColor = active ? '#E8633A' : '#3A3530';
     chip.style.marginRight = '8px';
     chip.addEventListener('click', () => { S.activeInterest = c.id; buildEvents(); });
     typeStrip.appendChild(chip);
@@ -1656,8 +1660,11 @@ function renderMessages(msgs) {
     const m = S.members.find(mb=>mb.id===msg.userId) || {avatar:'🌻',name:'Someone',color:'#E8633A',id:''};
     const isMe = msg.userId === S.userId;
     const time = msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : msg.time||'';
+    const avatarContent = m.photoUrl
+      ? `<img src="${m.photoUrl}" style="width:30px;height:30px;border-radius:8px;object-fit:cover;" onerror="this.outerHTML='${m.avatar}'">` 
+      : m.avatar;
     return `<div class="msg${isMe?' me':''}">
-      <div class="msg-av" style="background:${m.color}20">${m.avatar}</div>
+      <div class="msg-av" style="background:${m.color}20;overflow:hidden;">${avatarContent}</div>
       <div class="msg-body">
         ${!isMe?`<div class="msg-sender" style="color:${m.color}">${m.name}</div>`:''}
         <div class="bubble">${msg.text}</div>
@@ -1696,16 +1703,29 @@ function scrollChatToBottom() {
 function buildProfile() {
   const m = S.myProfile;
   if (!m) return;
-  const myEvents = S.events.filter(e=>(e.going||[]).includes(S.userId));
+  const myEvents = S.events.filter(e=>(e.going||[]).includes(S.userId) && !e.deleted);
+  const hasPhoto = !!m.photoUrl;
+
   document.getElementById('tab-profile').innerHTML = `
     <div class="sec-hdr"><div class="sec-title">My Profile</div></div>
     <div class="profile-hero">
       <div class="profile-av-row">
-        <div class="profile-av" style="background:${m.color}20">${m.avatar}</div>
-        <div><div class="profile-name">${m.name}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">${m.handle}</div></div>
+        <div style="position:relative;flex-shrink:0;">
+          ${hasPhoto
+            ? `<img src="${m.photoUrl}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid ${m.color||'#E8633A'};" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+               <div style="display:none;width:72px;height:72px;border-radius:50%;background:${m.color||'#E8633A'}20;align-items:center;justify-content:center;font-size:34px;">${m.avatar}</div>`
+            : `<div style="width:72px;height:72px;border-radius:50%;background:${m.color||'#E8633A'}20;display:flex;align-items:center;justify-content:center;font-size:34px;border:3px solid ${m.color||'#E8633A'}30;">${m.avatar}</div>`}
+          <div onclick="window.triggerProfilePhotoUpload()" style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:#E8633A;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;">📷</div>
+        </div>
+        <div>
+          <div class="profile-name">${m.name}</div>
+          <div style="font-size:12px;color:#A09488;margin-top:3px;">${m.handle}</div>
+          <div style="font-size:13px;color:#6B6258;margin-top:4px;line-height:1.4;">${m.bio||''}</div>
+        </div>
       </div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.5">${m.bio||'No bio yet'}</div>
-      <button class="edit-btn" onclick="window.openEditModal()"">Edit Profile</button>
+      <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="window.uploadProfilePhoto(this)">
+      <div id="profilePhotoStatus" style="font-size:12px;color:#A09488;text-align:center;margin-top:8px;display:none;">Uploading…</div>
+      <button class="edit-btn" onclick="window.openEditModal()">Edit Profile</button>
     </div>
     <div class="lbl">Location</div>
     <div class="card"><div class="loc-grid">
@@ -1716,12 +1736,39 @@ function buildProfile() {
     <div class="card"><div class="soc-row">
       ${m.socials?.ig?`<div class="soc-chip">📸 <b>@${m.socials.ig}</b></div>`:''}
       ${m.socials?.sc?`<div class="soc-chip">🎵 <b>${m.socials.sc}</b></div>`:''}
-      ${!m.socials?.ig&&!m.socials?.sc?'<div style="font-size:13px;color:var(--text3)">No socials added yet</div>':''}
+      ${!m.socials?.ig&&!m.socials?.sc?'<div style="font-size:13px;color:#A09488">No socials added yet</div>':''}
     </div></div>
     <div class="lbl">My Events (${myEvents.length})</div>
-    ${myEvents.length===0?`<div style="font-size:13px;color:var(--text3);padding:10px 0">You haven't RSVPed to any events yet</div>`:''}
-    ${myEvents.map(ev=>`<div class="card"><div style="font-weight:700;font-size:14px">${ev.name}</div><div style="font-size:12px;color:var(--text3);margin-top:4px">${ev.date||'TBD'}${ev.city?` · ${ev.city}`:''}</div></div>`).join('')}`;
+    ${myEvents.length===0?`<div style="font-size:13px;color:#A09488;padding:10px 0">No upcoming events yet</div>`:''}
+    ${myEvents.map(ev=>`<div class="card"><div style="font-weight:700;font-size:14px">${ev.name}</div><div style="font-size:12px;color:#A09488;margin-top:4px">${ev.date||'TBD'}${ev.city?` · ${ev.city}`:''}</div></div>`).join('')}`;
 }
+
+window.triggerProfilePhotoUpload = function() {
+  document.getElementById('profilePhotoInput')?.click();
+};
+
+window.uploadProfilePhoto = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const status = document.getElementById('profilePhotoStatus');
+  if (status) status.style.display = 'block';
+  try {
+    const FS = window._firebaseStorage;
+    const ST = window._storage;
+    const path = `profiles/${S.userId}/photo`;
+    const storageRef = FS.ref(ST, path);
+    await FS.uploadBytes(storageRef, file);
+    const url = await FS.getDownloadURL(storageRef);
+    await dbSet(`groups/${S.groupId}/members/${S.userId}`, {photoUrl: url});
+    S.myProfile = {...S.myProfile, photoUrl: url};
+    buildProfile();
+    buildSquad(); // update squad cards too
+  } catch(e) {
+    console.error('Profile photo upload error:', e);
+    alert('Upload failed. Make sure Firebase Storage is enabled.');
+    if (status) status.style.display = 'none';
+  }
+};
 
 // ─── EDIT PROFILE ─────────────────────────────────────────────────────────────
 window.openEditModal = function() {
@@ -1768,8 +1815,14 @@ window.saveProfile = async function() {
 window.openMember = function(id) {
   const m = S.members.find(mb=>mb.id===id);
   if(!m)return;
-  document.getElementById('shAv').style.background=`${m.color||'#E8633A'}20`;
-  document.getElementById('shAv').textContent=m.avatar||'🌻';
+  document.getElementById('shAv').style.background = `${m.color||'#E8633A'}20`;
+  document.getElementById('shAv').style.borderRadius = '50%';
+  document.getElementById('shAv').style.overflow = 'hidden';
+  if (m.photoUrl) {
+    document.getElementById('shAv').innerHTML = `<img src="${m.photoUrl}" style="width:68px;height:68px;object-fit:cover;" onerror="this.outerHTML='${m.avatar||'🌻'}'">`;
+  } else {
+    document.getElementById('shAv').textContent = m.avatar||'🌻';
+  }
   document.getElementById('shName').textContent=m.name+(m.id===S.userId?' (You)':'');
   document.getElementById('shHandle').textContent=m.handle||'';
   document.getElementById('shBio').textContent=m.bio||'';
@@ -1923,7 +1976,9 @@ function renderFeedPosts(posts) {
 
     return `<div class="feed-post">
       <div class="feed-post-header">
-        <div style="width:38px;height:38px;border-radius:10px;background:${author.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${author.avatar}</div>
+        <div style="width:38px;height:38px;border-radius:50%;background:${author.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;">
+          ${author.photoUrl ? `<img src="${author.photoUrl}" style="width:38px;height:38px;object-fit:cover;" onerror="this.outerHTML='${author.avatar}'">` : author.avatar}
+        </div>
         <div style="flex:1;">
           <div style="font-weight:700;font-size:14px;color:${author.color};">${author.name}</div>
           <div style="font-size:11px;color:#A09488;">${timeStr}</div>
@@ -2569,6 +2624,8 @@ window._pickEditAvatar = window._pickEditAvatar; // already set
 // Now expose the ones that were plain functions (not already on window)
 window.openEventSheet = window.openEventSheet;
 window.closeEventSheet = window.closeEventSheet;
+window.triggerProfilePhotoUpload = window.triggerProfilePhotoUpload;
+window.uploadProfilePhoto = window.uploadProfilePhoto;
 window.openPostComposer = window.openPostComposer;
 window.previewPhoto = window.previewPhoto;
 window.clearPhotoPreview = window.clearPhotoPreview;
