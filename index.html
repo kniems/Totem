@@ -1125,25 +1125,31 @@ function buildEvents() {
       <div onclick="window._setShowPast(true)" style="flex:1;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;background:${S.showPast?'#6B6258':'#FFFFFF'};color:${S.showPast?'#FFFFFF':'#6B6258'};border:2px solid ${S.showPast?'#6B6258':'#E0D8CC'};">Past</div>
     </div>
 
-    ${!S.showPast ? `<div class="add-event-form">
-      <div class="add-event-title">➕ Add an event</div>
-      <input class="form-input" id="evName" placeholder="Event name (e.g. Pitchfork Fest)" style="margin-bottom:8px;width:100%">
-      <div class="form-row">
-        <input class="form-input" id="evDateStart" type="date" title="Start date">
-        <input class="form-input" id="evDateEnd" type="date" title="End date (multi-day)">
+    ${!S.showPast ? `
+    <div style="margin-bottom:14px;">
+      <div onclick="window._toggleAddEvent()" style="background:#FFFFFF;border:2px dashed #D8D0C4;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <div style="width:28px;height:28px;background:#E8633A;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:18px;font-weight:700;flex-shrink:0;" id="addEventToggleIcon">+</div>
+        <div style="font-size:14px;font-weight:600;color:#1A1612;">Add an event</div>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">End date optional for multi-day events</div>
-      <select class="form-select" id="evCity" style="margin-bottom:8px;">
-        <option value="">Select a city…</option>
-        ${US_CITIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
-      </select>
-      <input class="form-input" id="evVenue" placeholder="Venue (optional)" style="margin-bottom:8px;width:100%">
-      <select class="form-select" id="evType" style="margin-bottom:8px;">
-        <option value="fest">Festival</option>
-        <option value="show">Show</option>
-        <option value="other">Other Event</option>
-      </select>
-      <button class="add-btn" onclick="window.addEvent()">ADD EVENT + RSVP GOING</button>
+      <div id="addEventForm" style="display:none;background:#FFFFFF;border:2px dashed #D8D0C4;border-top:none;border-radius:0 0 16px 16px;padding:16px;">
+        <input class="form-input" id="evName" placeholder="Event name (e.g. Pitchfork Fest)" style="margin-bottom:8px;width:100%">
+        <div class="form-row">
+          <input class="form-input" id="evDateStart" type="date" title="Start date">
+          <input class="form-input" id="evDateEnd" type="date" title="End date (multi-day)">
+        </div>
+        <div style="font-size:11px;color:#A09488;margin-bottom:8px;">End date optional for multi-day events</div>
+        <select class="form-select" id="evCity" style="margin-bottom:8px;">
+          <option value="">Select a city…</option>
+          ${US_CITIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <input class="form-input" id="evVenue" placeholder="Venue (optional)" style="margin-bottom:8px;width:100%">
+        <select class="form-select" id="evType" style="margin-bottom:8px;">
+          <option value="fest">Festival</option>
+          <option value="show">Show</option>
+          <option value="other">Other Event</option>
+        </select>
+        <button class="add-btn" onclick="window.addEvent()">ADD EVENT + RSVP GOING</button>
+      </div>
     </div>` : ''}
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
@@ -1189,7 +1195,7 @@ function buildEvents() {
         </div>
       </div>`;
     }).join('')}`;
-  setTimeout(() => buildFilterChips(eventCities, interestChips), 50);
+  buildFilterChips(eventCities, interestChips);
 }
 
 function buildFilterChips(eventCities, interestChips) {
@@ -2544,6 +2550,14 @@ window.leaveGroup = window.leaveGroup; // already set
 window._setFilter = window._setFilter; // already set
 window._setCityFilter = window._setCityFilter; // already set
 window._setShowPast = function(past) { S.showPast=past; S.activeCity='all'; S.activeInterest='all'; buildEvents(); };
+window._toggleAddEvent = function() {
+  const form = document.getElementById('addEventForm');
+  const icon = document.getElementById('addEventToggleIcon');
+  if (!form) return;
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  if (icon) icon.textContent = isOpen ? '+' : '×';
+};
 window._togNotif = window._togNotif; // already set
 window._togSettingsInt = window._togSettingsInt; // already set
 window._ob = window._ob; // already set
