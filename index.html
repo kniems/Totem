@@ -1007,11 +1007,12 @@ async function loadApp() {
 window.showTab = function(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('act'));
   btn.classList.add('act');
+  const chatTabs = ['chat'];
   ['squad','events','feed','pin','map','chat','profile','settings','admin'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (!el) return;
     if (t === name) {
-      el.style.display = 'flex';
+      el.style.display = chatTabs.includes(t) ? 'flex' : 'block';
       el.style.flexDirection = 'column';
     } else {
       el.style.display = 'none';
