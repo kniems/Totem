@@ -363,9 +363,10 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
     <div class="hdr">
       <div class="hdr-top">
         <div class="logo">TOTEM</div>
-        <div class="group-badge">
+        <div class="group-badge" onclick="window.openGroupSwitcher()" style="cursor:pointer;">
           <span id="hdrTotem" style="font-size:17px;">🦅</span>
           <span id="hdrName" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Loading…</span>
+          <span style="font-size:10px;color:#A09488;margin-left:2px;">▾</span>
         </div>
       </div>
       <div class="nav">
@@ -387,6 +388,22 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
     <div id="tab-profile" class="content" style="display:none;flex:1;"></div>
     <div id="tab-settings" class="content" style="display:none;flex:1;"></div>
     <div id="tab-admin" class="content" style="display:none;flex:1;"></div>
+  </div>
+
+  <!-- GROUP SWITCHER -->
+  <div class="overlay" id="groupSwitcher" style="display:none;" onclick="window.closeGroupSwitcher()">
+    <div class="sheet" onclick="event.stopPropagation()" style="padding-bottom:48px;">
+      <div class="sh-handle"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;">Your Groups</div>
+        <button class="close-btn" onclick="window.closeGroupSwitcher()">×</button>
+      </div>
+      <div id="groupSwitcherList"></div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+        <button onclick="window.closeGroupSwitcher();window.startCreateGroup();" style="background:#E8633A;border:none;border-radius:12px;padding:14px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:white;cursor:pointer;width:100%;letter-spacing:0.5px;">+ CREATE A NEW GROUP</button>
+        <button onclick="window.closeGroupSwitcher();window.startJoinGroup();" style="background:#FFFFFF;border:2px solid #E0D8CC;border-radius:12px;padding:13px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;color:#6B6258;cursor:pointer;width:100%;">Join an existing group</button>
+      </div>
+    </div>
   </div>
 
   <!-- EVENT DETAIL SHEET -->
@@ -478,6 +495,7 @@ const CITY_COORDS = {
   "Kansas City, MO":{x:48,y:43},"St. Louis, MO":{x:53,y:42},"Minneapolis, MN":{x:50,y:26},
   // Northeast
   "Asbury Park, NJ":{x:74,y:37},
+  "New York, NY":{x:73,y:36},
   "Baltimore, MD":{x:72,y:39},"Washington, DC":{x:72,y:40},"Pittsburgh, PA":{x:67,y:36},
   "Richmond, VA":{x:72,y:42},"Raleigh, NC":{x:70,y:46},
   // South
@@ -860,7 +878,14 @@ window._ob = async function(next) {
     await dbSet(`groups/${S.groupId}/members/${S.userId}`, profile);
     S.myProfile = profile;
     document.getElementById('ob').style.display = 'none';
-    await loadApp();
+    // If returning from in-app group creation, go back to main app
+    if (S._returningToApp) {
+      S._returningToApp = false;
+      document.getElementById('mainApp').style.display = 'flex';
+      await loadApp();
+    } else {
+      await loadApp();
+    }
   }
 };
 
@@ -1130,9 +1155,23 @@ function buildFilterChips(eventCities, interestChips) {
   cityStrip.innerHTML = '';
   [{v:'all', l:'All Cities'}, ...eventCities.map(c=>({v:c, l:c.split(',')[0]}))].forEach(({v, l}) => {
     const active = (!S.activeCity || S.activeCity==='all') ? v==='all' : S.activeCity===v;
-    const chip = document.createElement('div');
+    const chip = document.createElement('span');
     chip.textContent = l;
-    chip.style.cssText = `flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;border-width:2px;border-style:solid;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border-color:${active?'#E8633A':'#C8BFB0'};`;
+    chip.style.display = 'inline-block';
+    chip.style.flexShrink = '0';
+    chip.style.padding = '8px 16px';
+    chip.style.borderRadius = '20px';
+    chip.style.fontSize = '13px';
+    chip.style.fontWeight = '700';
+    chip.style.fontFamily = "'Outfit', sans-serif";
+    chip.style.cursor = 'pointer';
+    chip.style.whiteSpace = 'nowrap';
+    chip.style.borderWidth = '2px';
+    chip.style.borderStyle = 'solid';
+    chip.style.backgroundColor = active ? '#E8633A' : '#FFFFFF';
+    chip.style.color = active ? '#FFFFFF' : '#1A1612';
+    chip.style.borderColor = active ? '#E8633A' : '#C8BFB0';
+    chip.style.marginRight = '8px';
     chip.addEventListener('click', () => { S.activeCity = v; buildEvents(); });
     cityStrip.appendChild(chip);
   });
@@ -1141,9 +1180,23 @@ function buildFilterChips(eventCities, interestChips) {
   typeStrip.innerHTML = '';
   interestChips.forEach(c => {
     const active = S.activeInterest === c.id;
-    const chip = document.createElement('div');
+    const chip = document.createElement('span');
     chip.textContent = (c.emoji ? c.emoji + ' ' : '') + (c.label || 'All Types');
-    chip.style.cssText = `flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;border-width:2px;border-style:solid;background:${active?'#E8633A':'#FFFFFF'};color:${active?'#FFFFFF':'#1A1612'};border-color:${active?'#E8633A':'#C8BFB0'};`;
+    chip.style.display = 'inline-block';
+    chip.style.flexShrink = '0';
+    chip.style.padding = '8px 16px';
+    chip.style.borderRadius = '20px';
+    chip.style.fontSize = '13px';
+    chip.style.fontWeight = '700';
+    chip.style.fontFamily = "'Outfit', sans-serif";
+    chip.style.cursor = 'pointer';
+    chip.style.whiteSpace = 'nowrap';
+    chip.style.borderWidth = '2px';
+    chip.style.borderStyle = 'solid';
+    chip.style.backgroundColor = active ? '#E8633A' : '#FFFFFF';
+    chip.style.color = active ? '#FFFFFF' : '#1A1612';
+    chip.style.borderColor = active ? '#E8633A' : '#C8BFB0';
+    chip.style.marginRight = '8px';
     chip.addEventListener('click', () => { S.activeInterest = c.id; buildEvents(); });
     typeStrip.appendChild(chip);
   });
@@ -1346,20 +1399,21 @@ function buildMap() {
 
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
-    <div id="leafletMap" style="width:100%;height:280px;border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;z-index:0;"></div>
-    <div class="map-legend">
-      ${S.members.map(m=>`
-        <div class="leg-row" onclick="window.openMember('${m.id}')">
-          <div style="font-size:20px">${m.avatar||'🌻'}</div>
-          <div class="leg-info">
-            <div class="leg-name" style="color:${m.color||'#E8633A'}">${m.name}</div>
-            <div class="leg-city">${m.city||'⚠️ No city set'}</div>
-            ${!getCityCoords(m.city) && m.city ? `<div style="font-size:10px;color:#E8633A;">Re-save city in Profile to appear on map</div>` : ''}
+    <div id="leafletMap" style="width:100%;height:260px;border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;z-index:0;position:relative;"></div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">YOUR CREW</div>
+    <div style="background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:10px;">
+      ${S.members.map((m,i)=>`
+        <div onclick="window.openMember('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:${i<S.members.length-1?'1px solid #E8E2D9':'none'};cursor:pointer;">
+          <div style="font-size:20px;">${m.avatar||'🌻'}</div>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:13px;color:${m.color||'#E8633A'};">${m.name}</div>
+            <div style="font-size:11px;color:#A09488;margin-top:1px;">${m.city||'No city set'}</div>
+            ${!getCityLatLng(m.city) && m.city ? `<div style="font-size:10px;color:#E8633A;margin-top:2px;">Re-save city in Profile to appear on map</div>` : ''}
           </div>
-          ${m.nextCity?`<div class="leg-next"><span style="color:var(--accent)">→</span> ${m.nextCity}</div>`:''}
+          ${m.nextCity?`<div style="font-size:11px;color:#A09488;display:flex;align-items:center;gap:4px;"><span style="color:#E8633A;">→</span> ${m.nextCity}</div>`:''}
         </div>`).join('')}
     </div>
-    ${unknownMembers.length ? `<div style="margin-top:10px;font-size:12px;color:#A09488;padding:10px 14px;background:#EEE8DE;border-radius:10px;">📍 ${unknownMembers.map(m=>m.name).join(', ')} — re-save city in Profile to appear on map</div>` : ''}`;
+    <div style="height:20px;"></div>`;
 
   // Build Leaflet map
   initLeafletMap(cityGroups);
@@ -1372,6 +1426,7 @@ const CITY_LATLNG = {
   "Columbus, OH":[39.961,-82.999],"Cleveland, OH":[41.499,-81.695],"Cincinnati, OH":[39.103,-84.512],
   "Kansas City, MO":[39.099,-94.578],"St. Louis, MO":[38.627,-90.197],"Minneapolis, MN":[44.977,-93.265],
   "Asbury Park, NJ":[40.220,-74.012],
+  "New York, NY":[40.713,-74.006],
   "Baltimore, MD":[39.290,-76.612],"Washington, DC":[38.907,-77.036],"Pittsburgh, PA":[40.440,-79.996],
   "Richmond, VA":[37.541,-77.434],"Raleigh, NC":[35.779,-78.638],
   "Nashville, TN":[36.174,-86.767],"Atlanta, GA":[33.749,-84.388],"Charlotte, NC":[35.227,-80.843],
@@ -1748,7 +1803,122 @@ window.closeEventSheet = function() {
 
 window.closeMemberSheet = function() { document.getElementById('memberSheet').style.display='none'; };
 
-// ─── ADMIN PANEL (master account only) ────────────────────────────────────────
+// ─── GROUP SWITCHER ───────────────────────────────────────────────────────────
+
+async function loadUserGroups() {
+  // Find all groups this user is a member of
+  try {
+    const groupsSnap = await F.getDocs(F.collection(db, 'groups'));
+    const myGroups = [];
+    await Promise.all(groupsSnap.docs.map(async d => {
+      const memberSnap = await F.getDoc(F.doc(db, 'groups', d.id, 'members', S.userId));
+      if (memberSnap.exists()) {
+        myGroups.push({id: d.id, ...d.data()});
+      }
+    }));
+    return myGroups;
+  } catch(e) {
+    console.error('loadUserGroups error:', e);
+    return [];
+  }
+}
+
+window.openGroupSwitcher = async function() {
+  const switcher = document.getElementById('groupSwitcher');
+  const list = document.getElementById('groupSwitcherList');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:#A09488;font-size:13px;">Loading your groups…</div>';
+  switcher.style.display = 'flex';
+
+  const groups = await loadUserGroups();
+
+  if (!groups.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:#A09488;font-size:13px;">No groups found.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  groups.forEach(g => {
+    const isCurrent = g.id === S.groupId;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #E8E2D9;cursor:pointer;';
+    row.innerHTML = `
+      <div style="font-size:28px;">${g.totem || '🦅'}</div>
+      <div style="flex:1;">
+        <div style="font-size:15px;font-weight:700;color:#1A1612;">${g.name || 'Unnamed Group'}</div>
+        <div style="font-size:12px;color:#A09488;margin-top:2px;">${(g.interests||[]).slice(0,3).map(i=>ALL_INTERESTS.find(a=>a.id===i)?.emoji||'').join(' ')}</div>
+      </div>
+      ${isCurrent ? '<div style="font-size:18px;color:#E8633A;">✓</div>' : '<div style="font-size:14px;color:#C8BFB0;">›</div>'}`;
+    if (!isCurrent) {
+      row.onclick = () => window.switchGroup(g.id);
+    }
+    list.appendChild(row);
+  });
+};
+
+window.closeGroupSwitcher = function() {
+  document.getElementById('groupSwitcher').style.display = 'none';
+};
+
+window.switchGroup = async function(groupId) {
+  window.closeGroupSwitcher();
+  if (groupId === S.groupId) return;
+
+  // Show loading
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+
+  // Unsub all current listeners
+  S.unsubs.forEach(u => { try { u(); } catch(e){} });
+  S.unsubs = [];
+
+  // Reset state
+  S.groupId = groupId;
+  S.groupData = null;
+  S.members = [];
+  S.events = [];
+  S.messages = [];
+  S.pins = [];
+  S.activeChatTab = 'general';
+  setGroupId(groupId);
+
+  // Check if user has profile in new group
+  try {
+    const profile = await dbGet(`groups/${groupId}/members/${S.userId}`);
+    if (profile && profile.name) {
+      S.myProfile = profile;
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'flex';
+      // Reset to squad tab
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('act'));
+      document.querySelector('.nav-btn').classList.add('act');
+      ['squad','events','pin','map','chat','profile','settings','admin'].forEach(t => {
+        const el = document.getElementById('tab-'+t);
+        if (el) el.style.display = t==='squad' ? 'flex' : 'none';
+      });
+      await loadApp();
+    } else {
+      // New to this group — need profile
+      document.getElementById('loading').style.display = 'none';
+      showOnboarding('profile');
+    }
+  } catch(e) {
+    console.error('switchGroup error:', e);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    await loadApp();
+  }
+};
+
+window.startCreateGroup = function() {
+  // Reuse onboarding flow but return to app after
+  S._returningToApp = true;
+  showOnboarding('create');
+};
+
+window.startJoinGroup = function() {
+  S._returningToApp = true;
+  showOnboarding('join');
+};
 const MASTER_UID = 'ZfI2rVLFHJPnk0TTBF7OGfTvxsh2';
 
 async function buildAdminPanel() {
@@ -2056,6 +2226,11 @@ window._pickEditAvatar = window._pickEditAvatar; // already set
 // Now expose the ones that were plain functions (not already on window)
 window.openEventSheet = window.openEventSheet;
 window.closeEventSheet = window.closeEventSheet;
+window.openGroupSwitcher = window.openGroupSwitcher;
+window.closeGroupSwitcher = window.closeGroupSwitcher;
+window.switchGroup = window.switchGroup;
+window.startCreateGroup = window.startCreateGroup;
+window.startJoinGroup = window.startJoinGroup;
 window.showTab = showTab;
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
