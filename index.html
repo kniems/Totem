@@ -1189,7 +1189,7 @@ function buildEvents() {
         </div>
       </div>`;
     }).join('')}`;
-  buildFilterChips(eventCities, interestChips);
+  setTimeout(() => buildFilterChips(eventCities, interestChips), 50);
 }
 
 function buildFilterChips(eventCities, interestChips) {
