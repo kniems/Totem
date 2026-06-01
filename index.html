@@ -1129,6 +1129,15 @@ function buildEvents() {
       <div onclick="window._setShowPast(true)" style="flex:1;text-align:center;padding:9px;border-radius:10px;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;background:${S.showPast?'#6B6258':'#FFFFFF'};color:${S.showPast?'#FFFFFF':'#6B6258'};border:2px solid ${S.showPast?'#6B6258':'#E0D8CC'};">Past</div>
     </div>
 
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">📍 CITY</div>
+    </div>
+    <div id="cityFilterStrip" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">🎵 TYPE</div>
+    </div>
+    <div id="typeFilterStrip" style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
+
     ${!S.showPast ? `
     <div style="margin-bottom:14px;">
       <div onclick="window._toggleAddEvent()" style="background:#FFFFFF;border:2px dashed #D8D0C4;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;">
@@ -1155,15 +1164,6 @@ function buildEvents() {
         <button class="add-btn" onclick="window.addEvent()">ADD EVENT + RSVP GOING</button>
       </div>
     </div>` : ''}
-
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">📍 CITY</div>
-    </div>
-    <div id="cityFilterStrip" style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#A09488;">🎵 TYPE</div>
-    </div>
-    <div id="typeFilterStrip" style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
 
     ${filtered.length===0 && S.events.length===0 ? `<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Loading events…</div></div>` :
       filtered.length===0 && S.showPast ? `<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-text">No past events yet.</div></div>` :
