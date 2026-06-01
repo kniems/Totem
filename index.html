@@ -469,8 +469,10 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
       </div>
       <div class="lbl">Socials</div>
       <div class="soc-row" id="shSocials"></div>
-      <div class="lbl">Going to</div>
+      <div id="shUpcomingLabel" class="lbl">Going to</div>
       <div id="shEvents"></div>
+      <div id="shPastLabel" class="lbl" style="display:none;">Went to</div>
+      <div id="shPastEvents"></div>
       <div id="shAdminActions"></div>
     </div>
   </div>
@@ -966,16 +968,20 @@ async function loadApp() {
   // Live listeners
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/members`, members => {
     S.members = members;
+    // Keep myProfile in sync with latest member data
+    const myMember = members.find(m => m.id === S.userId);
+    if (myMember) S.myProfile = myMember;
     buildSquad();
     buildMap();
-    if (document.getElementById('tab-map').style.display !== 'none') buildMap();
+    if (document.getElementById('tab-profile').style.display !== 'none') buildProfile();
   })); // no orderBy — members don't have server timestamps
 
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/events`, events => {
     S.events = events;
-    buildSquad(); // rebuild squad so event counts update
-    buildEvents(); // always rebuild so first load shows events
-    buildChat(); // refresh chat tabs when events change
+    buildSquad();
+    buildEvents();
+    buildChat();
+    if (document.getElementById('tab-profile').style.display !== 'none') buildProfile();
   })); // sorted client-side by dateTs
 
   S.unsubs.push(dbListenCol(`groups/${S.groupId}/pins`, pins => {
@@ -1668,7 +1674,10 @@ function scrollChatToBottom() {
 function buildProfile() {
   const m = S.myProfile;
   if (!m) return;
-  const myEvents = S.events.filter(e=>(e.going||[]).includes(S.userId) && !e.deleted);
+  const allMyEvents = S.events.filter(e=>(e.going||[]).includes(S.userId) && !e.deleted)
+    .sort((a,b) => (a.dateTs||0) - (b.dateTs||0));
+  const myUpcoming = allMyEvents.filter(e => !isEventPast(e));
+  const myPast = [...allMyEvents.filter(e => isEventPast(e))].reverse();
   const hasPhoto = !!m.photoUrl;
 
   document.getElementById('tab-profile').innerHTML = `
@@ -1703,9 +1712,11 @@ function buildProfile() {
       ${m.socials?.sc?`<div class="soc-chip">🎵 <b>${m.socials.sc}</b></div>`:''}
       ${!m.socials?.ig&&!m.socials?.sc?'<div style="font-size:13px;color:#A09488">No socials added yet</div>':''}
     </div></div>
-    <div class="lbl">My Events (${myEvents.length})</div>
-    ${myEvents.length===0?`<div style="font-size:13px;color:#A09488;padding:10px 0">No upcoming events yet</div>`:''}
-    ${myEvents.map(ev=>`<div class="card"><div style="font-weight:700;font-size:14px">${ev.name}</div><div style="font-size:12px;color:#A09488;margin-top:4px">${ev.date||'TBD'}${ev.city?` · ${ev.city}`:''}</div></div>`).join('')}`;
+    <div class="lbl">My Events (${myUpcoming.length})</div>
+    ${myUpcoming.length===0?`<div style="font-size:13px;color:#A09488;padding:10px 0">No upcoming events — RSVP to some!</div>`:''}
+    ${myUpcoming.map(ev=>`<div class="card"><div style="font-weight:700;font-size:14px">${ev.name}</div><div style="font-size:12px;color:#A09488;margin-top:4px">${formatDateDisplay(ev.date)||'TBD'}${ev.city?` · ${ev.city}`:''}</div></div>`).join('')}
+    ${myPast.length>0?`<div class="lbl">Went to (${myPast.length})</div>`:''}
+    ${myPast.map(ev=>`<div class="card" style="opacity:0.7;"><div style="font-weight:700;font-size:14px">${ev.name}</div><div style="font-size:12px;color:#A09488;margin-top:4px">${formatDateDisplay(ev.date)||'TBD'}${ev.city?` · ${ev.city}`:''}</div></div>`).join('')}`;
 }
 
 window.triggerProfilePhotoUpload = function() {
@@ -1797,10 +1808,33 @@ window.openMember = function(id) {
     m.socials?.ig?`<div class="soc-chip">📸 <b>@${m.socials.ig}</b></div>`:'',
     m.socials?.sc?`<div class="soc-chip">🎵 <b>${m.socials.sc}</b></div>`:'',
   ].join('')||'<div style="font-size:13px;color:var(--text3)">No socials added</div>';
-  const evs = S.events.filter(e=>(e.going||[]).includes(id));
-  document.getElementById('shEvents').innerHTML=evs.length===0
-    ?'<div style="font-size:13px;color:var(--text3)">Nothing on the calendar yet</div>'
-    :evs.map(e=>`<div class="sh-ev-row"><div class="sh-ev-dot" style="background:${m.color||'#E8633A'}"></div><div style="flex:1"><div style="font-weight:600;font-size:13px">${e.name}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${e.date||'TBD'}${e.city?` · ${e.city}`:''}</div></div></div>`).join('');
+  const allEvs = S.events
+    .filter(e => (e.going||[]).includes(id) && !e.deleted)
+    .sort((a,b) => (a.dateTs||0) - (b.dateTs||0));
+  const upcomingEvs = allEvs.filter(e => !isEventPast(e));
+  const pastEvs = [...allEvs.filter(e => isEventPast(e))].reverse();
+
+  const evRow = (e, color) => `<div class="sh-ev-row">
+    <div class="sh-ev-dot" style="background:${color}"></div>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:13px">${e.name}</div>
+      <div style="font-size:11px;color:#A09488;margin-top:2px">${formatDateDisplay(e.date)||'TBD'}${e.city?` · ${e.city}`:''}</div>
+    </div>
+  </div>`;
+
+  document.getElementById('shEvents').innerHTML = upcomingEvs.length === 0
+    ? '<div style="font-size:13px;color:#A09488;">No upcoming events</div>'
+    : upcomingEvs.map(e => evRow(e, m.color||'#E8633A')).join('');
+
+  const pastLabel = document.getElementById('shPastLabel');
+  const pastContainer = document.getElementById('shPastEvents');
+  if (pastEvs.length > 0) {
+    if (pastLabel) pastLabel.style.display = 'block';
+    if (pastContainer) pastContainer.innerHTML = pastEvs.map(e => evRow(e, '#A09488')).join('');
+  } else {
+    if (pastLabel) pastLabel.style.display = 'none';
+    if (pastContainer) pastContainer.innerHTML = '';
+  }
 
   // Show remove button only if viewer is admin and not looking at themselves
   const isAdmin = S.groupData?.adminId === S.userId;
