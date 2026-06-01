@@ -539,9 +539,6 @@ const CITY_COORDS = {
   "Salt Lake City, UT":{x:28,y:38},"Portland, OR":{x:11,y:24},"Seattle, WA":{x:11,y:20},
   "Los Angeles, CA":{x:14,y:54},"San Francisco, CA":{x:10,y:44},"Oakland, CA":{x:10,y:44},
   "San Diego, CA":{x:17,y:58},"Sacramento, CA":{x:12,y:40},
-  // Fest venues
-  "Bonnaroo (Manchester, TN)":{x:59,y:49},"Coachella (Indio, CA)":{x:20,y:57},
-  "Lollapalooza (Chicago, IL)":{x:56,y:36},"Outside Lands (San Francisco, CA)":{x:10,y:44},
 };
 
 // Fuzzy city lookup — handles "chicago", "Chicago IL", "chicago, il" etc.
@@ -1086,8 +1083,8 @@ const US_CITIES = [
   "Oakland, CA","Orlando, FL","Philadelphia, PA","Phoenix, AZ","Pittsburgh, PA",
   "Portland, OR","Raleigh, NC","Richmond, VA","Sacramento, CA","Salt Lake City, UT",
   "San Diego, CA","San Francisco, CA","Seattle, WA","St. Louis, MO","Tampa, FL",
-  "Washington, DC","Bonnaroo (Manchester, TN)","Coachella (Indio, CA)",
-  "Lollapalooza (Chicago, IL)","Outside Lands (San Francisco, CA)",
+  "Washington, DC",
+
 ];
 
 function formatDateDisplay(dateStr) {
@@ -1485,8 +1482,8 @@ const CITY_LATLNG = {
   "Salt Lake City, UT":[40.761,-111.891],"Portland, OR":[45.523,-122.676],"Seattle, WA":[47.606,-122.332],
   "Los Angeles, CA":[34.052,-118.244],"San Francisco, CA":[37.774,-122.419],"Oakland, CA":[37.804,-122.271],
   "San Diego, CA":[32.715,-117.157],"Sacramento, CA":[38.581,-121.494],
-  "Bonnaroo (Manchester, TN)":[35.485,-86.068],"Coachella (Indio, CA)":[33.720,-116.217],
-  "Lollapalooza (Chicago, IL)":[41.870,-87.618],"Outside Lands (San Francisco, CA)":[37.770,-122.510],
+
+
 };
 
 function getCityLatLng(cityStr) {
