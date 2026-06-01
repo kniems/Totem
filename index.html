@@ -12,6 +12,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB3AKR6ZDizTdD8ApHMOd8eLlslocHiXQc",
@@ -25,9 +26,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 window._db = db;
 window._auth = auth;
+window._storage = storage;
 window._firebase = { collection, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, onSnapshot, query, orderBy, updateDoc, arrayUnion, arrayRemove, serverTimestamp, where };
+window._firebaseStorage = { ref, uploadBytes, getDownloadURL };
 window._firebaseAuth = { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut };
 window._dbReady = true;
 window.dispatchEvent(new Event('dbReady'));
@@ -285,6 +289,27 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
 .send-btn{background:var(--accent);border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;color:white;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 10px rgba(232,99,58,0.3);}
 .send-btn:active{transform:scale(0.92);}
 
+/* FEED */
+.feed-post{background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;margin-bottom:14px;overflow:hidden;animation:fadeUp 0.2s ease both;}
+.feed-post-header{display:flex;align-items:center;gap:10px;padding:14px 14px 10px;}
+.feed-post-img{width:100%;max-height:400px;object-fit:cover;display:block;background:#F6F1E9;}
+.feed-post-img-placeholder{width:100%;height:200px;background:#EEE8DE;display:flex;align-items:center;justify-content:center;font-size:40px;}
+.feed-post-body{padding:12px 14px;}
+.feed-post-caption{font-size:14px;color:#1A1612;line-height:1.5;margin-bottom:8px;}
+.feed-post-tag{display:inline-block;font-size:11px;font-weight:600;color:#E8633A;background:#FDF0EB;padding:3px 10px;border-radius:20px;margin-bottom:10px;}
+.feed-post-actions{display:flex;gap:16px;padding:0 14px 12px;border-top:1px solid #F0EBE3;padding-top:10px;}
+.feed-reaction-btn{background:none;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:5px;color:#6B6258;font-family:'Outfit',sans-serif;font-weight:600;padding:6px 0;}
+.feed-reactions{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 10px;}
+.feed-reaction-pill{font-size:13px;background:#F6F1E9;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px;cursor:pointer;}
+.feed-comments{border-top:1px solid #F0EBE3;padding:10px 14px;}
+.feed-comment{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;}
+.feed-comment-bubble{background:#F6F1E9;border-radius:12px;padding:8px 12px;flex:1;}
+.feed-comment-name{font-size:11px;font-weight:700;color:#E8633A;margin-bottom:2px;}
+.feed-comment-text{font-size:13px;color:#1A1612;line-height:1.4;}
+.feed-comment-input{display:flex;gap:8px;align-items:center;margin-top:8px;}
+.feed-compose{background:#FFFFFF;border:2px dashed #D8D0C4;border-radius:16px;padding:16px;margin-bottom:14px;cursor:pointer;transition:border-color 0.15s;}
+.feed-compose:hover{border-color:#E8633A;}
+
 /* PROFILE */
 .profile-hero{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:10px;}
 .profile-av-row{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
@@ -372,6 +397,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
       <div class="nav">
         <button class="nav-btn act" onclick="window.showTab('squad',this)">Squad</button>
         <button class="nav-btn" onclick="window.showTab('events',this)">Events</button>
+        <button class="nav-btn" onclick="window.showTab('feed',this)">Feed</button>
         <button class="nav-btn" onclick="window.showTab('pin',this)">📍 Live Pin</button>
         <button class="nav-btn" onclick="window.showTab('map',this)">Map</button>
         <button class="nav-btn" onclick="window.showTab('chat',this)">Chat</button>
@@ -382,6 +408,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
     </div>
     <div id="tab-squad" class="content" style="flex:1;"></div>
     <div id="tab-events" class="content" style="display:none;flex:1;"></div>
+    <div id="tab-feed" class="content" style="display:none;flex:1;"></div>
     <div id="tab-pin" class="content" style="display:none;flex:1;"></div>
     <div id="tab-map" class="content" style="display:none;flex:1;"></div>
     <div id="tab-chat" style="display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden;"></div>
@@ -980,7 +1007,7 @@ async function loadApp() {
 window.showTab = function(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('act'));
   btn.classList.add('act');
-  ['squad','events','pin','map','chat','profile','settings','admin'].forEach(t => {
+  ['squad','events','feed','pin','map','chat','profile','settings','admin'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (!el) return;
     if (t === name) {
@@ -992,6 +1019,7 @@ window.showTab = function(name, btn) {
   });
   if (name === 'chat') { buildChat(); setTimeout(scrollChatToBottom, 100); }
   if (name === 'settings') buildSettings();
+  if (name === 'feed') buildFeed();
   if (name === 'admin') buildAdminPanel();
 };
 
@@ -1803,6 +1831,280 @@ window.closeEventSheet = function() {
 
 window.closeMemberSheet = function() { document.getElementById('memberSheet').style.display='none'; };
 
+// ─── FEED ─────────────────────────────────────────────────────────────────────
+let feedUnsub = null;
+const FEED_REACTIONS = ['🔥','❤️','🤙','😂','👏','🎪'];
+
+function buildFeed() {
+  const el = document.getElementById('tab-feed');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="sec-hdr"><div class="sec-title">Feed</div><div class="sec-sub">Your crew's moments</div></div>
+
+    <div class="feed-compose" onclick="window.openPostComposer()">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:24px;">${S.myProfile?.avatar||'🌻'}</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;color:#A09488;">Share a moment with your crew…</div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <span style="font-size:11px;font-weight:600;color:#E8633A;background:#FDF0EB;padding:4px 10px;border-radius:20px;">📸 Photo</span>
+            <span style="font-size:11px;font-weight:600;color:#6B6258;background:#EEE8DE;padding:4px 10px;border-radius:20px;">✍️ Caption</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedPosts"><div class="empty-state"><div class="empty-icon">📸</div><div class="empty-text">No posts yet.<br>Be the first to share a moment!</div></div></div>`;
+
+  // Subscribe to feed posts
+  if (feedUnsub) { try { feedUnsub(); } catch(e){} }
+  const col = F.collection(db, 'groups', S.groupId, 'feed');
+  feedUnsub = F.onSnapshot(col, snap => {
+    const posts = snap.docs
+      .map(d => ({id: d.id, ...d.data()}))
+      .sort((a, b) => {
+        const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt||0);
+        const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt||0);
+        return tb - ta; // newest first
+      });
+    renderFeedPosts(posts);
+  });
+}
+
+function renderFeedPosts(posts) {
+  const container = document.getElementById('feedPosts');
+  if (!container) return;
+  if (!posts.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📸</div><div class="empty-text">No posts yet.<br>Be the first to share a moment!</div></div>';
+    return;
+  }
+
+  container.innerHTML = posts.map(post => {
+    const author = S.members.find(m => m.id === post.userId) || {avatar:'🌻', name:'Someone', color:'#E8633A'};
+    const ts = post.createdAt?.toMillis ? post.createdAt.toMillis() : (post.createdAt||0);
+    const timeStr = formatPostTime(ts);
+    const myReaction = (post.reactions||{})[S.userId];
+    const reactionCounts = {};
+    Object.values(post.reactions||{}).forEach(r => { reactionCounts[r] = (reactionCounts[r]||0)+1; });
+    const linkedEvent = post.eventId ? S.events.find(e => e.id === post.eventId) : null;
+
+    return `<div class="feed-post">
+      <div class="feed-post-header">
+        <div style="width:38px;height:38px;border-radius:10px;background:${author.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${author.avatar}</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:${author.color};">${author.name}</div>
+          <div style="font-size:11px;color:#A09488;">${timeStr}</div>
+        </div>
+        ${post.userId === S.userId || S.groupData?.adminId === S.userId ? `<button onclick="window.deletePost('${post.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;color:#C8BFB0;padding:4px;">×</button>` : ''}
+      </div>
+
+      ${post.imageUrl ? `<img class="feed-post-img" src="${post.imageUrl}" loading="lazy" onerror="this.style.display='none'">` : ''}
+
+      <div class="feed-post-body">
+        ${linkedEvent ? `<div class="feed-post-tag">🎪 ${linkedEvent.name}</div>` : ''}
+        ${post.caption ? `<div class="feed-post-caption">${post.caption}</div>` : ''}
+      </div>
+
+      <div class="feed-post-actions">
+        ${FEED_REACTIONS.map(r => `<button class="feed-reaction-btn" onclick="window.reactToPost('${post.id}','${r}')" style="${myReaction===r?'color:#E8633A;':''}">
+          ${r}
+        </button>`).join('')}
+        <button class="feed-reaction-btn" onclick="window.toggleComments('${post.id}')" style="margin-left:auto;">
+          💬 ${(post.comments||[]).length}
+        </button>
+      </div>
+
+      ${Object.keys(reactionCounts).length ? `<div class="feed-reactions">
+        ${Object.entries(reactionCounts).map(([r,c]) => `<div class="feed-reaction-pill">${r} <span style="font-size:12px;font-weight:700;color:#6B6258;">${c}</span></div>`).join('')}
+      </div>` : ''}
+
+      <div class="feed-comments" id="comments-${post.id}" style="display:none;">
+        ${(post.comments||[]).map(c => {
+          const cm = S.members.find(m => m.id === c.userId) || {avatar:'🌻', name:'Someone', color:'#E8633A'};
+          return `<div class="feed-comment">
+            <div style="font-size:18px;">${cm.avatar}</div>
+            <div class="feed-comment-bubble">
+              <div class="feed-comment-name">${cm.name}</div>
+              <div class="feed-comment-text">${c.text}</div>
+            </div>
+          </div>`;
+        }).join('')}
+        <div class="feed-comment-input">
+          <input id="comment-input-${post.id}" placeholder="Add a comment…" style="flex:1;background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:20px;padding:8px 14px;font-family:'Outfit',sans-serif;font-size:13px;color:#1A1612;outline:none;" onkeydown="if(event.key==='Enter')window.addComment('${post.id}')">
+          <button onclick="window.addComment('${post.id}')" style="background:#E8633A;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;color:white;font-size:15px;flex-shrink:0;">↑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function formatPostTime(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff/60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins/60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs/24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+// Post composer
+window.openPostComposer = function() {
+  const existing = document.getElementById('postComposerModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'postComposerModal';
+  modal.className = 'overlay';
+  modal.style.zIndex = '300';
+  modal.onclick = e => { if(e.target===modal) modal.remove(); };
+
+  const eventOptions = S.events.filter(e=>!e.deleted).map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+
+  modal.innerHTML = `
+    <div class="sheet" onclick="event.stopPropagation()" style="padding-bottom:48px;">
+      <div class="sh-handle"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;">New Post</div>
+        <button class="close-btn" onclick="document.getElementById('postComposerModal').remove()">×</button>
+      </div>
+
+      <div id="photoPreview" style="width:100%;border-radius:12px;overflow:hidden;margin-bottom:12px;display:none;position:relative;">
+        <img id="photoPreviewImg" style="width:100%;max-height:300px;object-fit:cover;display:block;">
+        <button onclick="window.clearPhotoPreview()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:28px;height:28px;color:white;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">×</button>
+      </div>
+
+      <div id="photoPickerBtn" style="background:#F6F1E9;border:2px dashed #C8BFB0;border-radius:12px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;" onclick="document.getElementById('photoFileInput').click()">
+        <div style="font-size:32px;margin-bottom:6px;">📸</div>
+        <div style="font-size:13px;font-weight:600;color:#6B6258;">Tap to add a photo</div>
+        <div style="font-size:11px;color:#A09488;margin-top:3px;">From your camera roll</div>
+      </div>
+      <input type="file" id="photoFileInput" accept="image/*" style="display:none;" onchange="window.previewPhoto(this)">
+
+      <textarea id="postCaption" placeholder="Write a caption…" style="width:100%;background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:12px;padding:12px 14px;font-family:'Outfit',sans-serif;font-size:14px;color:#1A1612;outline:none;resize:none;min-height:80px;margin-bottom:12px;" maxlength="500"></textarea>
+
+      ${eventOptions ? `<select id="postEventTag" style="width:100%;background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:12px;padding:12px 14px;font-family:'Outfit',sans-serif;font-size:13px;color:#1A1612;outline:none;margin-bottom:16px;">
+        <option value="">Tag an event (optional)</option>
+        ${eventOptions}
+      </select>` : ''}
+
+      <div id="postUploadStatus" style="font-size:13px;color:#A09488;text-align:center;margin-bottom:8px;display:none;">Uploading photo…</div>
+      <button onclick="window.submitPost()" id="postSubmitBtn" style="background:#E8633A;border:none;border-radius:12px;padding:16px;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;color:white;cursor:pointer;width:100%;letter-spacing:0.5px;">POST</button>
+    </div>`;
+
+  document.getElementById('app').appendChild(modal);
+};
+
+window.previewPhoto = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('photoPreviewImg').src = e.target.result;
+    document.getElementById('photoPreview').style.display = 'block';
+    document.getElementById('photoPickerBtn').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearPhotoPreview = function() {
+  document.getElementById('photoPreviewImg').src = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('photoPickerBtn').style.display = 'block';
+  document.getElementById('photoFileInput').value = '';
+};
+
+window.submitPost = async function() {
+  const caption = document.getElementById('postCaption')?.value.trim();
+  const fileInput = document.getElementById('photoFileInput');
+  const file = fileInput?.files[0];
+  const eventId = document.getElementById('postEventTag')?.value || '';
+  const btn = document.getElementById('postSubmitBtn');
+  const status = document.getElementById('postUploadStatus');
+
+  if (!caption && !file) { alert('Add a photo or caption to post.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Posting…';
+
+  let imageUrl = null;
+
+  if (file) {
+    status.style.display = 'block';
+    try {
+      const FS = window._firebaseStorage;
+      const ST = window._storage;
+      const path = `groups/${S.groupId}/feed/${S.userId}_${Date.now()}`;
+      const storageRef = FS.ref(ST, path);
+      await FS.uploadBytes(storageRef, file);
+      imageUrl = await FS.getDownloadURL(storageRef);
+    } catch(e) {
+      console.error('Upload error:', e);
+      alert('Photo upload failed. Check that Firebase Storage is enabled.');
+      btn.disabled = false;
+      btn.textContent = 'POST';
+      status.style.display = 'none';
+      return;
+    }
+  }
+
+  await dbAdd(`groups/${S.groupId}/feed`, {
+    userId: S.userId,
+    caption: caption || '',
+    imageUrl: imageUrl || null,
+    eventId: eventId || null,
+    reactions: {},
+    comments: [],
+  });
+
+  document.getElementById('postComposerModal')?.remove();
+};
+
+window.reactToPost = async function(postId, emoji) {
+  const ref = F.doc(db, 'groups', S.groupId, 'feed', postId);
+  const post = await F.getDoc(ref);
+  if (!post.exists()) return;
+  const reactions = post.data().reactions || {};
+  // Toggle — if already reacted with this emoji, remove it
+  if (reactions[S.userId] === emoji) {
+    delete reactions[S.userId];
+  } else {
+    reactions[S.userId] = emoji;
+  }
+  await F.updateDoc(ref, {reactions});
+};
+
+window.toggleComments = function(postId) {
+  const el = document.getElementById(`comments-${postId}`);
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') {
+      const input = document.getElementById(`comment-input-${postId}`);
+      if (input) input.focus();
+    }
+  }
+};
+
+window.addComment = async function(postId) {
+  const input = document.getElementById(`comment-input-${postId}`);
+  const text = input?.value.trim();
+  if (!text) return;
+  input.value = '';
+  const ref = F.doc(db, 'groups', S.groupId, 'feed', postId);
+  await F.updateDoc(ref, {
+    comments: F.arrayUnion({userId: S.userId, text, ts: Date.now()})
+  });
+};
+
+window.deletePost = async function(postId) {
+  if (!confirm('Delete this post?')) return;
+  await F.deleteDoc(F.doc(db, 'groups', S.groupId, 'feed', postId));
+};
+
 // ─── GROUP SWITCHER ───────────────────────────────────────────────────────────
 
 async function loadUserGroups() {
@@ -1891,7 +2193,7 @@ window.switchGroup = async function(groupId) {
       // Reset to squad tab
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('act'));
       document.querySelector('.nav-btn').classList.add('act');
-      ['squad','events','pin','map','chat','profile','settings','admin'].forEach(t => {
+      ['squad','events','feed','pin','map','chat','profile','settings','admin'].forEach(t => {
         const el = document.getElementById('tab-'+t);
         if (el) el.style.display = t==='squad' ? 'flex' : 'none';
       });
@@ -2226,6 +2528,14 @@ window._pickEditAvatar = window._pickEditAvatar; // already set
 // Now expose the ones that were plain functions (not already on window)
 window.openEventSheet = window.openEventSheet;
 window.closeEventSheet = window.closeEventSheet;
+window.openPostComposer = window.openPostComposer;
+window.previewPhoto = window.previewPhoto;
+window.clearPhotoPreview = window.clearPhotoPreview;
+window.submitPost = window.submitPost;
+window.reactToPost = window.reactToPost;
+window.toggleComments = window.toggleComments;
+window.addComment = window.addComment;
+window.deletePost = window.deletePost;
 window.openGroupSwitcher = window.openGroupSwitcher;
 window.closeGroupSwitcher = window.closeGroupSwitcher;
 window.switchGroup = window.switchGroup;
