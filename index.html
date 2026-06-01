@@ -1533,11 +1533,12 @@ function renderLeaflet(cityGroups) {
     attributionControl: false,
     dragging: true,
     scrollWheelZoom: false,
-  }).setView(defaultCenter, defaultZoom);
+  }).setView([39.5, -98.35], 4); // Start with full US view
 
-  // Warm, muted map tiles
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19, subdomains: 'abcd'
+  // OpenStreetMap tiles — most reliable, works everywhere
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    subdomains: 'abc'
   }).addTo(leafletMap);
 
   // Add pins
