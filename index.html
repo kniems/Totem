@@ -1126,17 +1126,18 @@ function buildEvents() {
   // Work with the right set based on toggle
   let baseEvents = S.showPast ? pastEvents : upcomingEvents;
 
-  // Get unique states from events
-  const eventStates = [...new Set(baseEvents.map(e => {
-    if (!e.city) return null;
-    const parts = e.city.split(',');
-    return parts.length > 1 ? parts[1].trim() : null;
-  }).filter(Boolean))].sort();
+  // Get unique states from events — extract state abbreviation (last part after comma)
+  const getState = (city) => {
+    if (!city) return null;
+    const parts = city.split(',');
+    return parts.length > 1 ? parts[parts.length - 1].trim() : null;
+  };
+  const eventStates = [...new Set(baseEvents.map(e => getState(e.city)).filter(Boolean))].sort();
 
   // Apply state/interest filters
   let filtered = baseEvents;
   if (S.activeState && S.activeState !== 'all') {
-    filtered = filtered.filter(e => e.city && e.city.split(',')[1]?.trim() === S.activeState);
+    filtered = filtered.filter(e => getState(e.city) === S.activeState);
   }
   if (S.activeInterest && S.activeInterest !== 'all') {
     filtered = filtered.filter(e => e.interests?.includes(S.activeInterest));
