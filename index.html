@@ -1073,25 +1073,49 @@ function buildSquad() {
     return;
   }
 
-  el.innerHTML = heroHtml + `
-    ${members.map((m,i)=>{
-      const evCount = activeEvents.filter(e=>(e.going||[]).includes(m.id) && !isEventPast(e)).length;
-      return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
-        <div class="m-row">
-          <div class="m-av" style="background:${m.color||'#E8633A'}20;overflow:hidden;border-radius:13px;">
-            ${m.photoUrl
-              ? `<img src="${m.photoUrl}" style="width:46px;height:46px;object-fit:cover;border-radius:13px;" onerror="this.outerHTML='<span style=font-size:22px>${m.avatar||'🌻'}</span>'">`
-              : `<span style="font-size:22px;">${m.avatar||'🌻'}</span>`}
-          </div>
-          <div class="m-info">
-            <div class="m-name">${m.name||'Member'}${m.id===S.userId?'<span class="admin-badge">You</span>':''}</div>
-            <div class="m-handle">${m.handle||''}</div>
-            <div class="m-loc"><div class="ldot" style="background:${m.color||'#E8633A'}"></div>${m.city||'Location not set'}${m.nextCity?`<span style="font-size:11px;color:var(--text3)">→ ${m.nextCity}</span>`:''}</div>
-          </div>
-          ${evCount>0?`<div class="ev-pill">${evCount} event${evCount!==1?'s':''}</div>`:''}
+  // Group members by city
+  const grouped = {};
+  const noCity = [];
+  members.forEach(m => {
+    if (m.city) { if (!grouped[m.city]) grouped[m.city]=[]; grouped[m.city].push(m); }
+    else noCity.push(m);
+  });
+  const sortedCities = Object.keys(grouped).sort();
+
+  const memberCard = (m, i) => {
+    const evCount = activeEvents.filter(e=>(e.going||[]).includes(m.id)&&!isEventPast(e)).length;
+    return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
+      <div class="m-row">
+        <div class="m-av" style="background:${m.color||'#E8633A'}20;overflow:hidden;border-radius:13px;">
+          ${m.photoUrl
+            ? `<img src="${m.photoUrl}" style="width:46px;height:46px;object-fit:cover;border-radius:13px;" onerror="this.outerHTML='<span style=font-size:22px>${m.avatar||'🌻'}</span>'">`
+            : `<span style="font-size:22px;">${m.avatar||'🌻'}</span>`}
         </div>
-      </div>`;
-    }).join('')}`;
+        <div class="m-info">
+          <div class="m-name">${m.name||'Member'}${m.id===S.userId?'<span class="admin-badge">You</span>':''}</div>
+          <div class="m-handle">${m.handle||''}</div>
+          ${m.nextCity?`<div style="font-size:11px;color:#A09488;margin-top:2px;">→ ${m.nextCity}</div>`:''}
+        </div>
+        ${evCount>0?`<div class="ev-pill">${evCount} event${evCount!==1?'s':''}</div>`:''}
+      </div>
+    </div>`;
+  };
+
+  let idx = 0;
+  const sections = sortedCities.map(city => {
+    const cityMembers = grouped[city];
+    const html = `<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin:16px 0 8px;display:flex;align-items:center;gap:8px;">
+      <span>📍 ${city}</span>
+      <span style="background:#EEE8DE;color:#A09488;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">${cityMembers.length}</span>
+    </div>${cityMembers.map(m=>memberCard(m,idx++)).join('')}`;
+    return html;
+  }).join('');
+
+  const noCitySection = noCity.length ? `
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin:16px 0 8px;">📍 No city set</div>
+    ${noCity.map(m=>memberCard(m,idx++)).join('')}` : '';
+
+  el.innerHTML = heroHtml + sections + noCitySection;
 }
 
 // ─── EVENTS ───────────────────────────────────────────────────────────────────
