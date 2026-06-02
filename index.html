@@ -524,7 +524,7 @@ const CITY_COORDS = {
   "Columbus, OH":{x:63,y:38},"Cleveland, OH":{x:64,y:34},"Cincinnati, OH":{x:61,y:41},
   "Kansas City, MO":{x:48,y:43},"St. Louis, MO":{x:53,y:42},"Minneapolis, MN":{x:50,y:26},
   // Northeast
-  "Asbury Park, NJ":{x:74,y:37},
+  "Seoul, South Korea":{x:185,y:42},
   "New York, NY":{x:73,y:36},
   "Baltimore, MD":{x:72,y:39},"Washington, DC":{x:72,y:40},"Pittsburgh, PA":{x:67,y:36},
   "Richmond, VA":{x:72,y:42},"Raleigh, NC":{x:70,y:46},
@@ -1083,7 +1083,7 @@ function buildSquad() {
 const US_CITIES = [
   "Asbury Park, NJ",
   "Chicago, IL","Cincinnati, OH","Cleveland, OH","Columbus, OH","Dallas, TX",
-  "Grand Rapids, MI","Denver, CO","Detroit, MI","Houston, TX","Indianapolis, IN","Kansas City, MO",
+  "Seoul, South Korea","Detroit, MI","Houston, TX","Indianapolis, IN","Kansas City, MO",
   "Las Vegas, NV","Los Angeles, CA","Louisville, KY","Memphis, TN","Miami, FL",
   "Milwaukee, WI","Minneapolis, MN","Nashville, TN","New Orleans, LA","New York, NY",
   "Oakland, CA","Orlando, FL","Philadelphia, PA","Phoenix, AZ","Pittsburgh, PA",
@@ -1473,8 +1473,8 @@ function buildMap() {
 
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
-    <div style="border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;position:relative;height:300px;">
-      <div id="leafletMap" style="width:100%;height:100%;position:absolute;top:0;left:0;"></div>
+    <div style="border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;position:relative;height:300px;width:100%;">
+      <div id="leafletMap" style="position:absolute;top:0;left:0;right:0;bottom:0;width:100% !important;height:300px !important;"></div>
     </div>
     <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">YOUR CREW</div>
     <div style="background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:10px;">
@@ -1504,7 +1504,7 @@ const CITY_LATLNG = {
   "Detroit, MI":[42.331,-83.046],"Milwaukee, WI":[43.049,-87.906],"Indianapolis, IN":[39.768,-86.158],
   "Columbus, OH":[39.961,-82.999],"Cleveland, OH":[41.499,-81.695],"Cincinnati, OH":[39.103,-84.512],
   "Kansas City, MO":[39.099,-94.578],"St. Louis, MO":[38.627,-90.197],"Minneapolis, MN":[44.977,-93.265],
-  "Asbury Park, NJ":[40.220,-74.012],
+  "Seoul, South Korea":[37.5665,126.9780],
   "New York, NY":[40.713,-74.006],
   "Baltimore, MD":[39.290,-76.612],"Washington, DC":[38.907,-77.036],"Pittsburgh, PA":[40.440,-79.996],
   "Richmond, VA":[37.541,-77.434],"Raleigh, NC":[35.779,-78.638],
@@ -1589,15 +1589,17 @@ function renderLeaflet(cityGroups) {
   setTimeout(() => {
     const el = document.getElementById('leafletMap');
     if (el && leafletMap) {
-      // Force explicit pixel size
-      el.style.width = el.parentElement.offsetWidth + 'px';
+      const w = window.innerWidth - 40; // subtract padding
+      el.style.width = w + 'px';
       el.style.height = '300px';
       leafletMap.invalidateSize({reset: true, animate: false});
-      if (markers.length === 1) {
-        leafletMap.setView(markers[0], 8);
-      } else if (markers.length > 1) {
-        leafletMap.fitBounds(L.latLngBounds(markers), { padding: [50, 50], maxZoom: 7 });
-      }
+      setTimeout(() => {
+        if (markers.length === 1) {
+          leafletMap.setView(markers[0], 8);
+        } else if (markers.length > 1) {
+          leafletMap.fitBounds(L.latLngBounds(markers), { padding: [50, 50], maxZoom: 7 });
+        }
+      }, 100);
     }
   }, 400);
 }
