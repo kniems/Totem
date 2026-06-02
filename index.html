@@ -1004,7 +1004,7 @@ async function loadApp() {
       S.interests = gd.interests || S.interests;
       document.getElementById('hdrTotem').textContent = gd.totem || '🦅';
       document.getElementById('hdrName').textContent = gd.name || 'My Crew';
-      // Rebuild settings if it's visible
+      buildSquad(); // rebuild so group hero tile updates
       if (document.getElementById('tab-settings').style.display !== 'none') buildSettings();
     }
   }));
@@ -1050,15 +1050,30 @@ window.showTab = function(name, btn) {
 function buildSquad() {
   const el = document.getElementById('tab-squad');
   const members = S.members;
+  const gData = S.groupData;
+  const activeEvents = S.events.filter(e => !e.deleted);
+  const upcoming = activeEvents.filter(e => (e.going||[]).includes(S.userId) && !isEventPast(e));
+
+  // Group hero tile
+  const heroHtml = `
+    <div style="background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:14px;position:relative;">
+      ${gData?.groupPhotoUrl
+        ? `<img src="${gData.groupPhotoUrl}" style="width:100%;height:160px;object-fit:cover;display:block;">`
+        : `<div style="width:100%;height:160px;background:linear-gradient(135deg,#E8633A 0%,#C8522A 100%);display:flex;align-items:center;justify-content:center;font-size:64px;">${gData?.totem||'🦅'}</div>`}
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));padding:16px 16px 14px;">
+        <div style="font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;color:white;">${gData?.name||'My Crew'}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:3px;">${members.length} member${members.length!==1?'s':''} · ${upcoming.length} upcoming event${upcoming.length!==1?'s':''}</div>
+      </div>
+      <button onclick="window.uploadGroupPhoto()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.4);border:none;border-radius:20px;padding:6px 12px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:white;cursor:pointer;">📷 Edit</button>
+      <input type="file" id="groupPhotoInput" accept="image/*" style="display:none;" onchange="window.handleGroupPhotoUpload(this)">
+    </div>`;
+
   if (!members.length) {
-    el.innerHTML = `<div class="sec-hdr"><div class="sec-title">Your Crew</div></div><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Your crew will appear here once they join.<br><br>Share your invite code from Settings!</div></div>`;
+    el.innerHTML = heroHtml + `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-text">Your crew will appear here once they join.<br><br>Share your invite code from Settings!</div></div>`;
     return;
   }
-  const activeEvents = S.events.filter(e => !e.deleted);
-  const upcoming = activeEvents.filter(e => e.going?.includes(S.userId));
-  el.innerHTML = `
-    <div class="sec-hdr"><div class="sec-title">Your Crew</div><div class="sec-sub">${members.length} member${members.length!==1?'s':''}</div></div>
-    ${upcoming.length ? `<div class="info-banner">🎪 You're going to ${upcoming.length} upcoming event${upcoming.length!==1?'s':''}!</div>` : ''}
+
+  el.innerHTML = heroHtml + `
     ${members.map((m,i)=>{
       const evCount = activeEvents.filter(e=>(e.going||[]).includes(m.id) && !isEventPast(e)).length;
       return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
@@ -1617,15 +1632,12 @@ let chatUnsubs = {};
 
 function buildChat() {
   const el = document.getElementById('tab-chat');
-  const myEvents = S.events.filter(e=>(e.going||[]).includes(S.userId) && !e.deleted);
-  const myUpcoming = myEvents.filter(e => !isEventPast(e));
-  const myPast = myEvents.filter(e => isEventPast(e));
+  // Only show upcoming events in chat tab — past event chats live in the Past events tab
+  const myUpcoming = S.events.filter(e=>(e.going||[]).includes(S.userId) && !e.deleted && !isEventPast(e));
 
   const chatTabs = [
     {id:'general', label:'# General'},
     ...myUpcoming.map(e=>({id:e.id, label:`# ${e.name.length>12?e.name.slice(0,12)+'…':e.name}`})),
-    ...(myPast.length ? [{id:'__pastDivider', label:'── Past ──', disabled:true}] : []),
-    ...myPast.map(e=>({id:e.id, label:`# ${e.name.length>12?e.name.slice(0,12)+'…':e.name}`, past:true})),
   ];
 
   // Only set flex layout if the tab is actually visible — don't override display:none
@@ -1970,10 +1982,18 @@ window.openEventSheet = function(evId) {
       ${maybe.map(memberRow).join('')}
     ` : ''}`;
 
+  const isPast = isEventPast(ev);
   const rsvpLabel = iGo ? '✓ Going' : iMaybe ? '? Maybe' : '+ I\'m In';
   const rsvpHint = iGo ? 'Tap → Maybe' : iMaybe ? 'Tap → Remove' : '';
 
-  document.getElementById('evShActions').innerHTML = `
+  document.getElementById('evShActions').innerHTML = isPast ? `
+    <button onclick="window.closeEventSheet();window.openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}');"
+      style="flex:1;background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#6B6258;cursor:pointer;">
+      💬 View Chat Archive
+    </button>
+    ${canEdit ? `<button onclick="window.closeEventSheet();window.openEditEvent('${ev.id}');"
+      style="background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;">✏️</button>` : ''}
+  ` : `
     <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
       <button onclick="window.cycleRsvp('${ev.id}');window.closeEventSheet();"
         style="background:${iGo?'#ECF5F1':iMaybe?'#FFF8E7':'#E8633A'};border:${iGo?'1px solid #B5D9CE':iMaybe?'1px solid #F0D090':'none'};border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${iGo?'#2A7A5E':iMaybe?'#C47D1A':'white'};cursor:pointer;width:100%;">
@@ -1986,9 +2006,8 @@ window.openEventSheet = function(evId) {
       💬 Chat
     </button>
     ${canEdit ? `<button onclick="window.closeEventSheet();window.openEditEvent('${ev.id}');"
-      style="background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;">
-      ✏️
-    </button>` : ''}`;
+      style="background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;">✏️</button>` : ''}
+  `;
 
   document.getElementById('eventSheet').style.display = 'flex';
 };
@@ -2654,6 +2673,34 @@ window.leaveGroup = function() {
   }
 };
 
+window.uploadGroupPhoto = function() {
+  document.getElementById('groupPhotoInput')?.click();
+};
+
+window.handleGroupPhotoUpload = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const FS = window._firebaseStorage;
+    const ST = window._storage;
+    const path = `groups/${S.groupId}/groupPhoto`;
+    const storageRef = FS.ref(ST, path);
+    await FS.uploadBytes(storageRef, file);
+    const url = await FS.getDownloadURL(storageRef);
+    await F.updateDoc(F.doc(db, 'groups', S.groupId), {groupPhotoUrl: url});
+    S.groupData = {...S.groupData, groupPhotoUrl: url};
+    // Update header badge
+    const hdrTotem = document.getElementById('hdrTotem');
+    if (hdrTotem && S.myProfile?.photoUrl) {
+      hdrTotem.innerHTML = `<img src="${S.myProfile.photoUrl}" style="width:24px;height:24px;object-fit:cover;border-radius:50%;">`;
+    }
+    buildSquad();
+  } catch(e) {
+    console.error('Group photo upload error:', e);
+    alert('Upload failed. Check Firebase Storage is enabled.');
+  }
+};
+
 window.signOutUser = async function() {
   if (!confirm('Sign out of Totem?')) return;
   await FA.signOut(window._auth);
@@ -2719,6 +2766,8 @@ window.reactToPost = window.reactToPost;
 window.toggleComments = window.toggleComments;
 window.addComment = window.addComment;
 window.deletePost = window.deletePost;
+window.uploadGroupPhoto = window.uploadGroupPhoto;
+window.handleGroupPhotoUpload = window.handleGroupPhotoUpload;
 window.openGroupSwitcher = window.openGroupSwitcher;
 window.closeGroupSwitcher = window.closeGroupSwitcher;
 window.switchGroup = window.switchGroup;
