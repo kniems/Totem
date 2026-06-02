@@ -1037,7 +1037,12 @@ window.showTab = function(name, btn) {
   if (name === 'settings') buildSettings();
   if (name === 'feed') buildFeed();
   if (name === 'profile') buildProfile();
-  if (name === 'map') { buildMap(); setTimeout(()=>{ if(leafletMap) leafletMap.invalidateSize(); }, 100); }
+  if (name === 'map') {
+    buildMap();
+    // Give the DOM time to paint before initializing Leaflet
+    setTimeout(() => { if (leafletMap) { leafletMap.invalidateSize(true); } }, 200);
+    setTimeout(() => { if (leafletMap) { leafletMap.invalidateSize(true); } }, 500);
+  }
   if (name === 'admin') buildAdminPanel();
 };
 
@@ -1535,10 +1540,10 @@ function initLeafletMap(cityGroups) {
     document.head.appendChild(css);
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => renderLeaflet(cityGroups);
+    script.onload = () => setTimeout(() => renderLeaflet(cityGroups), 150);
     document.head.appendChild(script);
   } else {
-    renderLeaflet(cityGroups);
+    setTimeout(() => renderLeaflet(cityGroups), 150);
   }
 }
 
@@ -1546,64 +1551,47 @@ function renderLeaflet(cityGroups) {
   const mapEl = document.getElementById('leafletMap');
   if (!mapEl) return;
 
-  // Destroy old map instance if exists
   if (leafletMap) { try { leafletMap.remove(); } catch(e){} leafletMap = null; }
-
-  const allLatLngs = Object.entries(cityGroups).map(([city]) => getCityLatLng(city)).filter(Boolean);
-
-  // Default US view if no members have coords yet
-  const defaultCenter = [39.5, -98.35];
-  const defaultZoom = 4;
 
   leafletMap = L.map('leafletMap', {
     zoomControl: false,
     attributionControl: false,
     dragging: true,
     scrollWheelZoom: false,
-  }).setView([39.5, -98.35], 4); // Start with full US view
+  }).setView([39.5, -98.35], 4);
 
-  // OpenStreetMap tiles — most reliable, works everywhere
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    subdomains: 'abc'
+    maxZoom: 19, subdomains: 'abc'
   }).addTo(leafletMap);
 
-  // Add pins
   const markers = [];
   Object.entries(cityGroups).forEach(([city, {members}]) => {
     const ll = getCityLatLng(city);
     if (!ll) return;
-    const names = members.map(m=>m.name.split(' ')[0]).join(', ');
-    const avatars = members.slice(0,3).map(m=>m.avatar||'🌻').join('');
+    const avatars = members.slice(0,3).map(m => m.avatar||'🌻').join('');
     const color = members[0].color || '#E8633A';
     const size = members.length > 1 ? 44 : 36;
-
     const icon = L.divIcon({
       className: '',
-      html: `<div style="background:${color};border:3px solid white;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:${members.length>1?14:18}px;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;">${avatars}</div>`,
+      html: '<div style="background:' + color + ';border:3px solid white;border-radius:50%;width:' + size + 'px;height:' + size + 'px;display:flex;align-items:center;justify-content:center;font-size:' + (members.length>1?13:17) + 'px;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">' + avatars + '</div>',
       iconSize: [size, size],
       iconAnchor: [size/2, size/2],
     });
-
-    const marker = L.marker(ll, {icon}).addTo(leafletMap);
-    marker.bindTooltip(`<b>${city.split(',')[0]}</b><br>${names}`, {
-      permanent: false, direction: 'top', className: 'totem-tooltip'
-    });
-    markers.push(ll);
+    const names = members.map(m=>m.name.split(' ')[0]).join(', ');
+    L.marker(ll, {icon}).addTo(leafletMap)
+      .bindTooltip('<b>' + city.split(',')[0] + '</b><br>' + names, {direction:'top', className:'totem-tooltip'});
+    markers.push(L.latLng(ll[0], ll[1]));
   });
 
-  // Force map to recalculate its size before fitting bounds
-  leafletMap.invalidateSize();
-
-  // Fit map to show all pins with padding
-  if (markers.length === 1) {
-    leafletMap.setView(markers[0], 7);
-  } else if (markers.length > 1) {
-    leafletMap.fitBounds(L.latLngBounds(markers), {
-      padding: [40, 40],
-      maxZoom: 8,
-    });
-  }
+  // Wait for map to be ready then fix size and fit bounds
+  setTimeout(() => {
+    leafletMap.invalidateSize(true);
+    if (markers.length === 1) {
+      leafletMap.setView(markers[0], 8);
+    } else if (markers.length > 1) {
+      leafletMap.fitBounds(L.latLngBounds(markers), { padding: [50, 50], maxZoom: 7 });
+    }
+  }, 300);
 }
 
   // initLeafletMap called above — SVG map replaced
