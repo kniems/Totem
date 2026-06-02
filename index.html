@@ -1054,7 +1054,7 @@ function buildSquad() {
     <div class="sec-hdr"><div class="sec-title">Your Crew</div><div class="sec-sub">${members.length} member${members.length!==1?'s':''}</div></div>
     ${upcoming.length ? `<div class="info-banner">🎪 You're going to ${upcoming.length} upcoming event${upcoming.length!==1?'s':''}!</div>` : ''}
     ${members.map((m,i)=>{
-      const evCount = activeEvents.filter(e=>e.going?.includes(m.id)).length;
+      const evCount = activeEvents.filter(e=>(e.going||[]).includes(m.id) && !isEventPast(e)).length;
       return `<div class="card click" style="animation-delay:${i*0.04}s" onclick="window.openMember('${m.id}')">
         <div class="m-row">
           <div class="m-av" style="background:${m.color||'#E8633A'}20;overflow:hidden;border-radius:13px;">
@@ -1193,8 +1193,13 @@ function buildEvents() {
     ${filtered.map((ev,i)=>{
       const going = (ev.going||[]).map(id=>S.members.find(m=>m.id===id)).filter(Boolean);
       const iGo = (ev.going||[]).includes(S.userId);
+      const iMaybe = (ev.maybe||[]).includes(S.userId);
       const canEdit = ev.addedBy === S.userId || S.groupData?.adminId === S.userId;
-      const names = going.slice(0,2).map(m=>m.name.split(' ')[0]).join(', ')+(going.length>2?` +${going.length-2} more`:'');
+      const goingMembers = (ev.going||[]).map(id=>S.members.find(m=>m.id===id)).filter(Boolean);
+      const maybeMembers = (ev.maybe||[]).map(id=>S.members.find(m=>m.id===id)).filter(Boolean);
+      const names = goingMembers.slice(0,2).map(m=>m.name.split(' ')[0]).join(', ')+(goingMembers.length>2?` +${goingMembers.length-2} more`:'');
+      const rsvpLabel = iGo ? '✓ Going' : iMaybe ? '? Maybe' : '+ I\'m In';
+      const rsvpStyle = iGo ? 'background:#ECF5F1;color:#2A7A5E;border:1px solid #B5D9CE;' : iMaybe ? 'background:#FFF8E7;color:#C47D1A;border:1px solid #F0D090;' : 'background:#FDF0EB;color:#E8633A;border:1px solid #FAE3D8;';
       return `<div class="ev-card" style="animation-delay:${i*0.04}s;${S.showPast?'opacity:0.75;':''}">
         <div class="ev-top">
           <div class="ev-name" style="cursor:pointer;" onclick="window.openEventSheet('${ev.id}')">${ev.name}</div>
@@ -1208,14 +1213,15 @@ function buildEvents() {
           ${ev.city?`<span>📍 ${ev.city}</span>`:''}
           ${ev.venue?`<span>🏟 ${ev.venue}</span>`:''}
         </div>
-        <div class="ev-going" style="flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="display:flex;align-items:center;gap:6px;flex:1;">
-            <div class="ga-wrap">${going.slice(0,5).map(m=>`<div class="ga" style="background:${m.color}20">${m.avatar}</div>`).join('')}</div>
-            ${going.length>0?`<span class="going-lbl">${names} going</span>`:`<span class="going-lbl" style="color:var(--text3)">No one going yet</span>`}
+        <div style="flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #E8E2D9;display:flex;align-items:center;">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap;row-gap:4px;">
+            ${goingMembers.length>0?`<div style="display:flex;">${goingMembers.slice(0,4).map(m=>`<div class="ga" style="background:${m.color}20">${m.photoUrl?`<img src="${m.photoUrl}" style="width:28px;height:28px;object-fit:cover;border-radius:8px;">`:m.avatar}</div>`).join('')}</div>`:``}
+            ${goingMembers.length>0?`<span style="font-size:12px;color:#6B6258;font-weight:500;">${names} going</span>`:`<span style="font-size:12px;color:#A09488;">No one going yet</span>`}
+            ${maybeMembers.length>0?`<span style="font-size:12px;color:#C47D1A;font-weight:500;">· ${maybeMembers.length} maybe</span>`:''}
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;">
-            <button class="rsvp-btn ${iGo?'going':'not-going'}" onclick="window.toggleRsvp('${ev.id}',${iGo})">${iGo?'✓ Going':'+ I\'m In'}</button>
-            <button style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 10px;font-family:Outfit,sans-serif;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;" onclick="window.openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}')">💬 Chat</button>
+            <button style="border-radius:var(--r-xs);padding:6px 12px;font-family:Outfit,sans-serif;font-size:11px;font-weight:700;cursor:pointer;${rsvpStyle}" onclick="window.cycleRsvp('${ev.id}')">${rsvpLabel}</button>
+            <button style="background:#EEE8DE;border:1px solid #E0D8CC;border-radius:var(--r-xs);padding:6px 10px;font-family:Outfit,sans-serif;font-size:11px;font-weight:600;color:#6B6258;cursor:pointer;" onclick="window.openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}')">💬</button>
           </div>
         </div>
       </div>`;
@@ -1281,6 +1287,26 @@ async function toggleRsvp(evId, currently) {
   }
 }
 window.toggleRsvp = toggleRsvp;
+
+window.cycleRsvp = async function(evId) {
+  const ref = F.doc(db, 'groups', S.groupId, 'events', evId);
+  // Read fresh from Firebase to avoid stale state
+  const snap = await F.getDoc(ref);
+  if (!snap.exists()) return;
+  const ev = snap.data();
+  const iGo = (ev.going||[]).includes(S.userId);
+  const iMaybe = (ev.maybe||[]).includes(S.userId);
+  if (!iGo && !iMaybe) {
+    // None → Going
+    await F.updateDoc(ref, {going: F.arrayUnion(S.userId), maybe: F.arrayRemove(S.userId)});
+  } else if (iGo) {
+    // Going → Maybe
+    await F.updateDoc(ref, {going: F.arrayRemove(S.userId), maybe: F.arrayUnion(S.userId)});
+  } else {
+    // Maybe → None
+    await F.updateDoc(ref, {going: F.arrayRemove(S.userId), maybe: F.arrayRemove(S.userId)});
+  }
+};
 
 // Edit event modal
 window.openEditEvent = function(evId) {
@@ -1899,8 +1925,10 @@ window.removeMember = async function(memberId, memberName) {
 window.openEventSheet = function(evId) {
   const ev = S.events.find(e => e.id === evId);
   if (!ev) return;
-  const going = (ev.going || []).map(id => S.members.find(m => m.id === id)).filter(Boolean);
-  const iGo = (ev.going || []).includes(S.userId);
+  const going = (ev.going||[]).map(id => S.members.find(m => m.id === id)).filter(Boolean);
+  const maybe = (ev.maybe||[]).map(id => S.members.find(m => m.id === id)).filter(Boolean);
+  const iGo = (ev.going||[]).includes(S.userId);
+  const iMaybe = (ev.maybe||[]).includes(S.userId);
   const canEdit = ev.addedBy === S.userId || S.groupData?.adminId === S.userId;
 
   document.getElementById('evShName').textContent = ev.name;
@@ -1912,23 +1940,39 @@ window.openEventSheet = function(evId) {
     ev.venue ? `<span>🏟 ${ev.venue}</span>` : '',
   ].filter(Boolean).join('');
 
-  document.getElementById('evShGoing').innerHTML = going.length === 0
-    ? `<div style="font-size:13px;color:#A09488;padding:10px 0;">No one going yet — be the first!</div>`
-    : going.map(m => `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E0D8CC;cursor:pointer;" onclick="window.closeEventSheet();window.openMember('${m.id}')">
-        <div style="width:40px;height:40px;border-radius:12px;background:${m.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${m.avatar}</div>
-        <div style="flex:1;">
-          <div style="font-weight:600;font-size:14px;color:#1A1612;">${m.name}${m.id===S.userId?' (You)':''}</div>
-          <div style="font-size:12px;color:#A09488;margin-top:2px;">${m.city||''}</div>
-        </div>
-        <div style="font-size:16px;color:#C8BFB0;">›</div>
-      </div>`).join('');
+  const memberRow = (m) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E0D8CC;cursor:pointer;" onclick="window.closeEventSheet();window.openMember('${m.id}')">
+      <div style="width:40px;height:40px;border-radius:12px;background:${m.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden;">
+        ${m.photoUrl ? `<img src="${m.photoUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:12px;">` : m.avatar}
+      </div>
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:14px;color:#1A1612;">${m.name}${m.id===S.userId?' (You)':''}</div>
+        <div style="font-size:12px;color:#A09488;margin-top:2px;">${m.city||''}</div>
+      </div>
+      <div style="font-size:16px;color:#C8BFB0;">›</div>
+    </div>`;
+
+  document.getElementById('evShGoing').innerHTML = `
+    ${going.length > 0 ? `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:8px;">✓ Going (${going.length})</div>
+      ${going.map(memberRow).join('')}
+    ` : '<div style="font-size:13px;color:#A09488;padding:10px 0;">No one going yet — be the first!</div>'}
+    ${maybe.length > 0 ? `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#C47D1A;margin-top:16px;margin-bottom:8px;">? Maybe (${maybe.length})</div>
+      ${maybe.map(memberRow).join('')}
+    ` : ''}`;
+
+  const rsvpLabel = iGo ? '✓ Going' : iMaybe ? '? Maybe' : '+ I\'m In';
+  const rsvpHint = iGo ? 'Tap → Maybe' : iMaybe ? 'Tap → Remove' : '';
 
   document.getElementById('evShActions').innerHTML = `
-    <button onclick="window.toggleRsvp('${ev.id}',${iGo});window.closeEventSheet();"
-      style="flex:1;background:${iGo?'#ECF5F1':'#E8633A'};border:${iGo?'1px solid #B5D9CE':'none'};border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${iGo?'#2A7A5E':'white'};cursor:pointer;">
-      ${iGo ? '✓ Going' : '+ I\'m In'}
-    </button>
+    <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+      <button onclick="window.cycleRsvp('${ev.id}');window.closeEventSheet();"
+        style="background:${iGo?'#ECF5F1':iMaybe?'#FFF8E7':'#E8633A'};border:${iGo?'1px solid #B5D9CE':iMaybe?'1px solid #F0D090':'none'};border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:${iGo?'#2A7A5E':iMaybe?'#C47D1A':'white'};cursor:pointer;width:100%;">
+        ${rsvpLabel}
+      </button>
+      ${rsvpHint ? `<div style="font-size:11px;color:#A09488;text-align:center;">${rsvpHint}</div>` : ''}
+    </div>
     <button onclick="window.closeEventSheet();window.openEventChat('${ev.id}','${ev.name.replace(/'/g,"\\'")}');"
       style="flex:1;background:#F6F1E9;border:1.5px solid #E0D8CC;border-radius:10px;padding:13px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:#1A1612;cursor:pointer;">
       💬 Chat
