@@ -371,7 +371,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
     <div class="splash-ring" style="width:300px;height:300px;top:-80px;right:-80px;"></div>
     <div class="splash-ring" style="width:200px;height:200px;bottom:-60px;left:-60px;"></div>
     <div class="splash-logo">TOTEM</div>
-    <div class="splash-sub">Find your crew</div>
+
   </div>
 
   <!-- LOADING -->
@@ -1040,8 +1040,8 @@ window.showTab = function(name, btn) {
   if (name === 'map') {
     buildMap();
     // Give the DOM time to paint before initializing Leaflet
-    setTimeout(() => { if (leafletMap) { leafletMap.invalidateSize(true); } }, 200);
-    setTimeout(() => { if (leafletMap) { leafletMap.invalidateSize(true); } }, 500);
+        setTimeout(() => { if (leafletMap) { leafletMap.invalidateSize(true); } }, 600);
+        setTimeout(() => { if (leafletMap) { leafletMap.invalidateSize(true); } }, 1000);
   }
   if (name === 'admin') buildAdminPanel();
 };
@@ -1551,7 +1551,7 @@ function initLeafletMap(cityGroups) {
     script.onload = () => setTimeout(() => renderLeaflet(cityGroups), 150);
     document.head.appendChild(script);
   } else {
-    setTimeout(() => renderLeaflet(cityGroups), 150);
+    setTimeout(() => renderLeaflet(cityGroups), 800);
   }
 }
 
@@ -1607,7 +1607,7 @@ function renderLeaflet(cityGroups) {
         }
       }, 100);
     }
-  }, 400);
+  }, 800);
 }
 
   // initLeafletMap called above — SVG map replaced
