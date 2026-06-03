@@ -1055,6 +1055,7 @@ function buildSquad() {
   const upcoming = activeEvents.filter(e => (e.going||[]).includes(S.userId) && !isEventPast(e));
 
   // Group hero tile
+  const inviteUrl = `${window.location.origin}${window.location.pathname}?join=${S.groupId}`;
   const heroHtml = `
     <div style="background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:14px;position:relative;">
       ${gData?.groupPhotoUrl
@@ -1066,6 +1067,19 @@ function buildSquad() {
       </div>
       <button onclick="window.uploadGroupPhoto()" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.4);border:none;border-radius:20px;padding:6px 12px;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:white;cursor:pointer;">📷 Edit</button>
       <input type="file" id="groupPhotoInput" accept="image/*" style="display:none;" onchange="window.handleGroupPhotoUpload(this)">
+    </div>
+    <div id="squadInviteBtn" style="background:#FDF0EB;border:1.5px dashed #E8633A;border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;cursor:pointer;" onclick="
+      navigator.clipboard.writeText('${inviteUrl}').then(()=>{
+        const el=document.getElementById('squadInviteBtn');
+        el.innerHTML='<span style=font-size:13px;font-weight:600;color:#E8633A;>✓ Link copied!</span>';
+        setTimeout(()=>buildSquad(),2000);
+      });
+    ">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#E8633A;">🔗 Invite your crew</div>
+        <div style="font-size:11px;color:#A09488;margin-top:2px;">Tap to copy invite link</div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:#E8633A;background:#FFFFFF;border:1px solid #E8633A;padding:5px 12px;border-radius:20px;">Copy</div>
     </div>`;
 
   if (!members.length) {
