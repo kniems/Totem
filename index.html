@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Totem — Find Your Crew</title>
+<title>Totem — Find Your People</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <!-- Firebase -->
@@ -349,7 +349,7 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
   <div class="auth-screen" id="authScreen">
     <div class="auth-hero">
       <div class="auth-logo">TOTEM</div>
-      <div class="auth-tagline">Your crew's permanent home base.</div>
+      <div class="auth-tagline">Your people's permanent home base.</div>
     </div>
     <div class="auth-body">
       <div class="auth-title" id="authTitle">Welcome back</div>
@@ -395,10 +395,10 @@ body{display:flex;justify-content:center;font-family:'Outfit',sans-serif;-webkit
         </div>
       </div>
       <div class="nav">
-        <button class="nav-btn act" onclick="window.showTab('squad',this)">Squad</button>
+        <button class="nav-btn act" onclick="window.showTab('squad',this)">Your People</button>
         <button class="nav-btn" onclick="window.showTab('events',this)">Events</button>
         <button class="nav-btn" onclick="window.showTab('feed',this)">Feed</button>
-        <button class="nav-btn" onclick="window.showTab('pin',this)">📍 Live Pin</button>
+        <button class="nav-btn" onclick="window.showTab('pin',this)">📍 Pin</button>
         <button class="nav-btn" onclick="window.showTab('map',this)">Map</button>
         <button class="nav-btn" onclick="window.showTab('chat',this)">Chat</button>
         <button class="nav-btn" onclick="window.showTab('profile',this)">Profile</button>
@@ -785,9 +785,9 @@ function renderOb() {
     create: `${hero()}
       <div class="ob-body">
         <div class="ob-step">Step 1 of 4 — Group</div>
-        <div class="ob-title">What's your crew called?</div>
+        <div class="ob-title">What's your people called?</div>
         <input class="ob-input" id="obGroupName" placeholder="e.g. Pitchfork Fam, The Squad…" value="${s.groupName}">
-        <div class="ob-desc">This is the name your crew sees. You can change it later.</div>
+        <div class="ob-desc">This is the name your people sees. You can change it later.</div>
         <div class="ob-dots"><div class="ob-dot act"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
         <button class="ob-primary" onclick="window._ob('createTotem')">NEXT →</button>
       </div>`,
@@ -796,7 +796,7 @@ function renderOb() {
       <div class="ob-body">
         <div class="ob-step">Step 2 of 4 — Group Totem</div>
         <div class="ob-title">Pick your group's totem.</div>
-        <div class="ob-desc">Your crew's symbol — shows on the map and group badge.</div>
+        <div class="ob-desc">Your group's symbol — shows on the map and group badge.</div>
         <div class="totem-grid">${TOTEMS.map(t=>`<button class="totem-opt${t===s.groupTotem?' sel':''}" onclick="window._obTotem('${t}')">${t}</button>`).join('')}</div>
         <div class="chosen-totem" id="obChosenTotem">${s.groupTotem}</div>
         <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot act"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
@@ -806,7 +806,7 @@ function renderOb() {
     createInterests: `${hero()}
       <div class="ob-body">
         <div class="ob-step">Step 3 of 4 — Interests</div>
-        <div class="ob-title">What's your crew into?</div>
+        <div class="ob-title">What's your people into?</div>
         <div class="ob-desc" style="margin-bottom:12px;">Drives event suggestions. Toggle anytime in Settings.</div>
         <div class="int-grid">${ALL_INTERESTS.map(i=>{const on=s.interests.includes(i.id);return`<button class="int-btn${on?' on':''}" onclick="window._obInt('${i.id}',this)"><span class="int-emoji">${i.emoji}</span><span style="flex:1">${i.label}</span><span class="int-check">${on?'✓':''}</span></button>`;}).join('')}</div>
         <div class="ob-dots" style="margin-top:14px;"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot act"></div><div class="ob-dot"></div></div>
@@ -817,7 +817,7 @@ function renderOb() {
       <div class="ob-body">
         <div class="ob-step">${S.groupId ? 'Almost there' : 'Step 4 of 4'} — Your Profile</div>
         <div class="ob-title">Set up your profile.</div>
-        <div class="ob-desc" style="margin-bottom:14px;">This is how your crew sees you.</div>
+        <div class="ob-desc" style="margin-bottom:14px;">This is how your people sees you.</div>
         <div class="lbl" style="margin-top:0;">Pick your avatar</div>
         <div class="totem-grid">${TOTEMS.map(t=>`<button class="totem-opt${t===s.avatar?' sel':''}" onclick="window._obAvatar('${t}')">${t}</button>`).join('')}</div>
         <div class="lbl">Your name</div>
@@ -839,7 +839,7 @@ function renderOb() {
     join: `${hero()}
       <div class="ob-body">
         <div class="ob-title">Join a group</div>
-        <div class="ob-desc">Enter an invite code from your crew.</div>
+        <div class="ob-desc">Enter an invite code from your people.</div>
         <input class="ob-input" id="obJoinCode" placeholder="Group invite code (e.g. abc123)">
         <div class="ob-desc" style="color:var(--text3);font-size:12px;">Ask your group admin for the code — it's in Settings → Invite Code.</div>
         <button class="ob-primary" onclick="window._ob('joinSubmit')">JOIN GROUP →</button>
@@ -1076,7 +1076,7 @@ function buildSquad() {
       });
     ">
       <div>
-        <div style="font-size:13px;font-weight:700;color:#E8633A;">🔗 Invite your crew</div>
+        <div style="font-size:13px;font-weight:700;color:#E8633A;">🔗 Invite your people</div>
         <div style="font-size:11px;color:#A09488;margin-top:2px;">Tap to copy invite link</div>
       </div>
       <div style="font-size:11px;font-weight:600;color:#E8633A;background:#FFFFFF;border:1px solid #E8633A;padding:5px 12px;border-radius:20px;">Copy</div>
@@ -1464,14 +1464,14 @@ function buildPin() {
   el.innerHTML = `
     <div class="pin-hero">
       <div class="pin-hero-title">📍 Live Meetup Pin</div>
-      <div class="pin-hero-sub">Drop your location so your crew can find you in the crowd. The digital totem pole.</div>
+      <div class="pin-hero-sub">Drop your location so your people can find you in the crowd. The digital totem pole.</div>
       ${myPin ? `<button class="pin-drop-btn active" onclick="window.clearPin()"">✓ Your pin is live — tap to remove</button>` : `
         <input class="pin-input" id="pinLocInput" placeholder="Where are you? e.g. North Gate, Main Stage">
         <button class="pin-drop-btn" onclick="window.dropPin()"">DROP MY PIN 📍</button>`}
     </div>
     ${myPin ? `<div class="my-pin"><div style="font-size:24px">${S.myProfile?.avatar||'🌻'}</div><div style="flex:1"><div style="font-weight:700;font-size:14px;color:var(--accent)">Your pin is live</div><div style="font-size:12px;color:var(--accent);opacity:0.7;margin-top:2px">📍 ${myPin.location}</div></div><button class="clear-pin" onclick="window.clearPin()"">Remove</button></div>` : ''}
     <div class="sec-hdr"><div class="sec-title">Active Pins</div><div class="sec-sub">${S.pins.length} live</div></div>
-    ${S.pins.length===0?`<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-text">No active pins yet.<br>Drop yours so your crew can find you!</div></div>`:''}
+    ${S.pins.length===0?`<div class="empty-state"><div class="empty-icon">📍</div><div class="empty-text">No active pins yet.<br>Drop yours so your people can find you!</div></div>`:''}
     ${S.pins.map((p,i)=>{
       const m = S.members.find(mb=>mb.id===p.userId) || {avatar:'🌻',name:'Someone',color:'#E8633A'};
       const mins = Math.floor((Date.now()-(p.droppedAt||Date.now()))/60000);
@@ -1532,8 +1532,8 @@ function buildMap() {
 
   el.innerHTML = `
     <div class="sec-hdr"><div class="sec-title">Fam Map</div><div class="sec-sub">City-level · not tracking</div></div>
-    <div style="border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;position:relative;height:300px;width:100%;">
-      <div id="leafletMap" style="position:absolute;top:0;left:0;right:0;bottom:0;width:100% !important;height:300px !important;"></div>
+    <div style="border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;position:relative;height:320px;width:100%;">
+      <div id="leafletMap" style="position:absolute;top:0;left:0;right:0;bottom:0;width:100% !important;height:320px !important;"></div>
     </div>
     <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">YOUR CREW</div>
     <div style="background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:10px;">
@@ -1648,15 +1648,21 @@ function renderLeaflet(cityGroups) {
   setTimeout(() => {
     const el = document.getElementById('leafletMap');
     if (el && leafletMap) {
-      const w = window.innerWidth - 40; // subtract padding
+      const w = window.innerWidth - 40;
       el.style.width = w + 'px';
-      el.style.height = '300px';
+      el.style.height = '320px';
       leafletMap.invalidateSize({reset: true, animate: false});
       setTimeout(() => {
         if (markers.length === 1) {
-          leafletMap.setView(markers[0], 8);
+          leafletMap.setView(markers[0], 7);
         } else if (markers.length > 1) {
-          leafletMap.fitBounds(L.latLngBounds(markers), { padding: [50, 50], maxZoom: 7 });
+          // If we have international members, focus on US crew only to avoid world zoom
+          const usMarkers = markers.filter(m => m.lng > -170 && m.lng < -60);
+          const boundsMarkers = usMarkers.length >= 2 ? usMarkers : markers;
+          leafletMap.fitBounds(L.latLngBounds(boundsMarkers), {
+            padding: [40, 40],
+            maxZoom: 7,
+          });
         }
       }, 100);
     }
@@ -1699,7 +1705,7 @@ function buildChat() {
     <div class="chat-msgs" id="chatMsgs" style="flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px;min-height:0;"></div>
     <div style="flex-shrink:0;background:#fff;border-top:1px solid #E0D8CC;padding:12px 14px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
       <div style="display:flex;gap:8px;align-items:center;">
-        <input class="chat-input" id="chatInput" placeholder="Message the crew…" onkeydown="if(event.key==='Enter')window.sendMsg()" style="flex:1;background:#EEE8DE;border:1.5px solid #E0D8CC;border-radius:22px;padding:12px 16px;font-family:'Outfit',sans-serif;font-size:16px;color:#1A1612;outline:none;">
+        <input class="chat-input" id="chatInput" placeholder="Message your people…" onkeydown="if(event.key==='Enter')window.sendMsg()" style="flex:1;background:#EEE8DE;border:1.5px solid #E0D8CC;border-radius:22px;padding:12px 16px;font-family:'Outfit',sans-serif;font-size:16px;color:#1A1612;outline:none;">
         <button onclick="window.sendMsg()" style="background:#E8633A;border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;color:white;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 10px rgba(232,99,58,0.3);">↑</button>
       </div>
     </div>`;
@@ -1735,7 +1741,7 @@ function renderMessages(msgs) {
   const container = document.getElementById('chatMsgs');
   if (!container) return;
   if (!msgs.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">No messages yet.<br>Say something to your crew!</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">💬</div><div class="empty-text">No messages yet.<br>Say something to your people!</div></div>`;
     return;
   }
   container.innerHTML = msgs.map(msg => {
@@ -2065,13 +2071,13 @@ function buildFeed() {
   if (!el) return;
 
   el.innerHTML = `
-    <div class="sec-hdr"><div class="sec-title">Feed</div><div class="sec-sub">Your crew's moments</div></div>
+    <div class="sec-hdr"><div class="sec-title">Feed</div><div class="sec-sub">Your people's moments</div></div>
 
     <div class="feed-compose" onclick="window.openPostComposer()">
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="font-size:24px;">${S.myProfile?.avatar||'🌻'}</div>
         <div style="flex:1;">
-          <div style="font-size:14px;color:#A09488;">Share a moment with your crew…</div>
+          <div style="font-size:14px;color:#A09488;">Share a moment with your people…</div>
           <div style="display:flex;gap:8px;margin-top:8px;">
             <span style="font-size:11px;font-weight:600;color:#E8633A;background:#FDF0EB;padding:4px 10px;border-radius:20px;">📸 Photo</span>
             <span style="font-size:11px;font-weight:600;color:#6B6258;background:#EEE8DE;padding:4px 10px;border-radius:20px;">✍️ Caption</span>
@@ -2566,7 +2572,7 @@ function buildSettings() {
   // INVITE LINK
   html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">INVITE LINK</div>');
   html.push('<div style="background:#FFFFFF;border:2px solid #D8D0C4;border-radius:16px;padding:16px;margin-bottom:16px;">');
-  html.push('<div style="font-size:15px;font-weight:600;color:#1A1612;margin-bottom:12px;">Share with your crew</div>');
+  html.push('<div style="font-size:15px;font-weight:600;color:#1A1612;margin-bottom:12px;">Share with your people</div>');
   if (inviteUrl) {
     // rendered dynamically below
   }
@@ -2576,7 +2582,7 @@ function buildSettings() {
 
   // INTERESTS
   html.push('<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">GROUP INTERESTS</div>');
-  html.push('<div style="font-size:13px;color:#6B6258;margin-bottom:12px;line-height:1.5;">Toggle what your crew is into.</div>');
+  html.push('<div style="font-size:13px;color:#6B6258;margin-bottom:12px;line-height:1.5;">Toggle what your people is into.</div>');
   html.push('<div class="int-grid" id="settingsIntGrid"></div>');
 
   // NOTIFICATIONS  
@@ -2676,7 +2682,7 @@ window.editGroupTotem = function() {
         <div style="font-family:Unbounded,sans-serif;font-size:18px;font-weight:700;">Group Totem</div>
         <button class="close-btn" onclick="document.getElementById('editGroupTotemModal').remove()">×</button>
       </div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Pick a symbol for your crew — shows on the map and in the group badge.</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Pick a symbol for your people — shows on the map and in the group badge.</div>
       <div class="totem-grid" id="groupTotemGrid">
         ${TOTEMS.map(t => `<button class="totem-opt${t===S.groupData?.totem?' sel':''}" onclick="window.selectGroupTotem('${t}')">${t}</button>`).join('')}
       </div>
