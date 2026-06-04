@@ -753,6 +753,16 @@ let obState = { step: 'welcome', groupName: '', groupTotem: '🦅', name: '', ha
 
 function showOnboarding(startStep) {
   obState.step = startStep;
+
+  // If user already has a profile (joining a second group), pre-fill their info
+  if (S.myProfile && S.myProfile.name) {
+    obState.name = S.myProfile.name || '';
+    obState.handle = S.myProfile.handle || '';
+    obState.bio = S.myProfile.bio || '';
+    obState.city = S.myProfile.city || '';
+    obState.avatar = S.myProfile.avatar || '🌻';
+  }
+
   const ob = document.getElementById('ob');
   ob.style.display = 'flex';
   renderOb();
@@ -816,8 +826,8 @@ function renderOb() {
     profile: `${hero()}
       <div class="ob-body">
         <div class="ob-step">${S.groupId ? 'Almost there' : 'Step 4 of 4'} — Your Profile</div>
-        <div class="ob-title">Set up your profile.</div>
-        <div class="ob-desc" style="margin-bottom:14px;">This is how your people sees you.</div>
+        <div class="ob-title">${S.myProfile?.name ? 'Confirm your profile.' : 'Set up your profile.'}</div>
+        <div class="ob-desc" style="margin-bottom:14px;">${S.myProfile?.name ? 'Your info has been carried over — update anything you\'d like.' : 'This is how your people see you.'}</div>
         <div class="lbl" style="margin-top:0;">Pick your avatar</div>
         <div class="totem-grid">${TOTEMS.map(t=>`<button class="totem-opt${t===s.avatar?' sel':''}" onclick="window._obAvatar('${t}')">${t}</button>`).join('')}</div>
         <div class="lbl">Your name</div>
@@ -1535,7 +1545,7 @@ function buildMap() {
     <div style="border-radius:16px;overflow:hidden;border:1px solid #E0D8CC;margin-bottom:14px;position:relative;height:320px;width:100%;">
       <div id="leafletMap" style="position:absolute;top:0;left:0;right:0;bottom:0;width:100% !important;height:320px !important;"></div>
     </div>
-    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">YOUR CREW</div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#A09488;margin-bottom:10px;">YOUR PEOPLE</div>
     <div style="background:#FFFFFF;border:1px solid #E0D8CC;border-radius:16px;overflow:hidden;margin-bottom:10px;">
       ${S.members.map((m,i)=>`
         <div onclick="window.openMember('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:${i<S.members.length-1?'1px solid #E8E2D9':'none'};cursor:pointer;">
@@ -1656,13 +1666,26 @@ function renderLeaflet(cityGroups) {
         if (markers.length === 1) {
           leafletMap.setView(markers[0], 7);
         } else if (markers.length > 1) {
-          // If we have international members, focus on US crew only to avoid world zoom
-          const usMarkers = markers.filter(m => m.lng > -170 && m.lng < -60);
-          const boundsMarkers = usMarkers.length >= 2 ? usMarkers : markers;
-          leafletMap.fitBounds(L.latLngBounds(boundsMarkers), {
-            padding: [40, 40],
-            maxZoom: 7,
-          });
+          // Find current user's city and center on them
+          const myMember = S.members.find(m => m.id === S.userId);
+          const myLatLng = myMember ? getCityLatLng(myMember.city) : null;
+          if (myLatLng) {
+            // Zoom to show user's region — find nearby markers within ~30 degrees
+            const nearbyMarkers = markers.filter(m =>
+              Math.abs(m.lat - myLatLng[0]) < 30 && Math.abs(m.lng - myLatLng[1]) < 40
+            );
+            const boundsMarkers = nearbyMarkers.length >= 2 ? nearbyMarkers : [L.latLng(myLatLng[0], myLatLng[1])];
+            if (boundsMarkers.length >= 2) {
+              leafletMap.fitBounds(L.latLngBounds(boundsMarkers), { padding: [40, 40], maxZoom: 7 });
+            } else {
+              leafletMap.setView(myLatLng, 6);
+            }
+          } else {
+            // Fallback — fit US members
+            const usMarkers = markers.filter(m => m.lng > -170 && m.lng < -60);
+            const boundsMarkers = usMarkers.length >= 2 ? usMarkers : markers;
+            leafletMap.fitBounds(L.latLngBounds(boundsMarkers), { padding: [40, 40], maxZoom: 7 });
+          }
         }
       }, 100);
     }
